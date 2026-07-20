@@ -227,7 +227,7 @@
   <div id="imageModal" class="image-modal">
     <div class="modal-bar">
       <button type="button" id="prevBtn">上一张</button><span id="counter">1 / 1</span><button type="button" id="nextBtn">下一张</button>
-      <button type="button" id="zoomOutBtn">缩小</button><button type="button" id="resetBtn">还原</button><button type="button" id="zoomInBtn">放大</button><button type="button" id="closeBtn">关闭</button>
+      <button type="button" id="zoomOutBtn">缩小</button><button type="button" id="rotateLeftBtn">左旋转</button><button type="button" id="resetBtn">还原</button><button type="button" id="rotateRightBtn">右旋转</button><button type="button" id="zoomInBtn">放大</button><button type="button" id="closeBtn">关闭</button>
     </div>
     <div id="stage" class="stage"><img id="modalImage" alt="报告图片"></div>
   </div>
@@ -258,22 +258,25 @@
       var modal = document.getElementById("imageModal");
       var modalImage = document.getElementById("modalImage");
       var counter = document.getElementById("counter");
-      var index = 0, zoom = 1, offsetX = 0, offsetY = 0, dragging = false, startX = 0, startY = 0;
-      images.forEach(function (img, imgIndex) { img.addEventListener("click", function () { index = imgIndex; zoom = 1; offsetX = 0; offsetY = 0; modal.classList.add("active"); render(); }); });
+      var index = 0, zoom = 1, rotation = 0, offsetX = 0, offsetY = 0, dragging = false, startX = 0, startY = 0;
+      images.forEach(function (img, imgIndex) { img.addEventListener("click", function () { index = imgIndex; resetView(); modal.classList.add("active"); render(); }); });
       document.getElementById("closeBtn").onclick = function () { modal.classList.remove("active"); };
       document.getElementById("prevBtn").onclick = function () { move(-1); };
       document.getElementById("nextBtn").onclick = function () { move(1); };
       document.getElementById("zoomOutBtn").onclick = function () { setZoom(zoom / 1.2); };
       document.getElementById("zoomInBtn").onclick = function () { setZoom(zoom * 1.2); };
-      document.getElementById("resetBtn").onclick = function () { zoom = 1; offsetX = 0; offsetY = 0; render(); };
+      document.getElementById("rotateLeftBtn").onclick = function () { rotation = (rotation - 90) % 360; render(); };
+      document.getElementById("rotateRightBtn").onclick = function () { rotation = (rotation + 90) % 360; render(); };
+      document.getElementById("resetBtn").onclick = function () { resetView(); render(); };
       document.getElementById("stage").addEventListener("wheel", function (event) { event.preventDefault(); setZoom(zoom * (event.deltaY < 0 ? 1.12 : 0.88)); });
       document.getElementById("stage").addEventListener("mousedown", function (event) { dragging = true; startX = event.clientX - offsetX; startY = event.clientY - offsetY; });
       document.addEventListener("mousemove", function (event) { if (!dragging) return; offsetX = event.clientX - startX; offsetY = event.clientY - startY; render(); });
       document.addEventListener("mouseup", function () { dragging = false; });
-      document.addEventListener("keydown", function (event) { if (!modal.classList.contains("active")) return; if (event.key === "Escape") modal.classList.remove("active"); if (event.key === "ArrowLeft") move(-1); if (event.key === "ArrowRight") move(1); });
-      function move(delta) { if (!images.length) return; index = (index + delta + images.length) % images.length; zoom = 1; offsetX = 0; offsetY = 0; render(); }
+      document.addEventListener("keydown", function (event) { if (!modal.classList.contains("active")) return; if (event.key === "Escape") modal.classList.remove("active"); if (event.key === "ArrowLeft") move(-1); if (event.key === "ArrowRight") move(1); if (event.key === "r" || event.key === "R") { rotation = (rotation + 90) % 360; render(); } });
+      function move(delta) { if (!images.length) return; index = (index + delta + images.length) % images.length; resetView(); render(); }
+      function resetView() { zoom = 1; rotation = 0; offsetX = 0; offsetY = 0; }
       function setZoom(value) { zoom = Math.max(0.2, Math.min(value, 8)); render(); }
-      function render() { if (!images[index]) return; modalImage.src = images[index].src; modalImage.alt = images[index].alt; modalImage.style.transform = "translate(-50%, -50%) translate(" + offsetX + "px, " + offsetY + "px) scale(" + zoom + ")"; counter.textContent = (index + 1) + " / " + images.length; }
+      function render() { if (!images[index]) return; modalImage.src = images[index].src; modalImage.alt = images[index].alt; modalImage.style.transform = "translate(-50%, -50%) translate(" + offsetX + "px, " + offsetY + "px) rotate(" + rotation + "deg) scale(" + zoom + ")"; counter.textContent = (index + 1) + " / " + images.length; }
     })();
   </script>
 </body>

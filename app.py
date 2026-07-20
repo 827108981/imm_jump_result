@@ -21,9 +21,11 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "免疫跳值排查反馈报告生成工具"
-VERSION = "V1.3"
+VERSION = "V1.4"
 SHEET_NAME = "用服工程师排查反馈表"
 TEMPLATE_NAME = "免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx"
+PACKAGE_FORMAT_VERSION = "frontline-report-v2"
+ZIP_MAX_BYTES = 500 * 1024 * 1024
 
 SOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
@@ -92,7 +94,7 @@ app = Flask(
     template_folder=str(SOURCE_DIR / "templates"),
     static_folder=str(SOURCE_DIR / "static"),
 )
-app.config["MAX_CONTENT_LENGTH"] = 80 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = ZIP_MAX_BYTES + 20 * 1024 * 1024
 
 
 class UserFacingError(Exception):
@@ -602,13 +604,30 @@ def build_attention_items(report_items):
 
 
 def make_issue_no(base_info):
-    today = datetime.now().strftime("%Y%m%d")
-    model = safe_name(base_info.get("model"), "MODEL")
-    serial = safe_name(base_info.get("serial"), "SN")
-    tail = datetime.now().strftime("%H%M%S")
-    compact_model = re.sub(r"[^A-Za-z0-9\u4e00-\u9fff-]+", "", model)[:12] or "MODEL"
-    compact_serial = re.sub(r"[^A-Za-z0-9\u4e00-\u9fff-]+", "", serial)[-8:] or "SN"
-    return "TZ-%s-%s-%s-%s" % (today, compact_model, compact_serial, tail)
+    hospital = normalize_text(base_info.get("hospital")) or "医院"
+    model = normalize_text(base_info.get("model")) or "机型"
+    serial = normalize_text(base_info.get("serial")) or "序列号"
+    return "%s*%s*%s_%s" % (hospital, model, serial, datetime.now().strftime("%Y%m%d%H%M%S"))
+
+
+def build_package_manifest(base_info, issue_no, generated_at, status="final", export_client="pc", stats=None):
+    return {
+        "format_version": PACKAGE_FORMAT_VERSION,
+        "template_name": TEMPLATE_NAME,
+        "tool_version": VERSION,
+        "app_name": APP_NAME,
+        "export_client": export_client,
+        "report_status": status,
+        "issue_no": issue_no,
+        "generated_at": generated_at,
+        "zip_max_bytes": ZIP_MAX_BYTES,
+        "summary": {
+            "hospital": normalize_text(base_info.get("hospital")),
+            "model": normalize_text(base_info.get("model")),
+            "serial": normalize_text(base_info.get("serial")),
+        },
+        "stats": stats or {},
+    }
 
 
 def copy_report_images(base_info, template_items, payload_items, images_dir):
@@ -659,12 +678,9 @@ def copy_report_images(base_info, template_items, payload_items, images_dir):
 
 
 def make_report_slug(base_info, issue_no=None):
-    today = datetime.now().strftime("%Y%m%d")
-    hospital = safe_name(base_info.get("hospital"), "医院")
-    serial = safe_name(base_info.get("serial"), "设备序列号")
     if issue_no:
-        return "跳值排查反馈报告_%s_%s_%s" % (hospital, serial, safe_name(issue_no, today))
-    return "跳值排查反馈报告_%s_%s_%s" % (hospital, serial, today)
+        return safe_name(issue_no, datetime.now().strftime("%Y%m%d%H%M%S"))
+    return safe_name(make_issue_no(base_info), datetime.now().strftime("%Y%m%d%H%M%S"))
 
 
 def unique_output_dir(slug):
@@ -1035,6 +1051,28 @@ def index():
     )
 
 
+def render_mobile_offline_html():
+    return (SOURCE_DIR / "templates" / "mobile_offline.html").read_text(encoding="utf-8")
+
+
+@app.route("/mobile-offline.html")
+def mobile_offline_preview():
+    return render_mobile_offline_html()
+
+
+@app.route("/mobile-offline/download")
+def mobile_offline_download():
+    html = render_mobile_offline_html()
+    buffer = io.BytesIO(html.encode("utf-8"))
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype="text/html; charset=utf-8",
+        as_attachment=True,
+        download_name="mobile_offline.html",
+    )
+
+
 @app.route("/api/template")
 def api_template():
     items = read_excel_template()
@@ -1044,10 +1082,13 @@ def api_template():
             "items": items,
             "groups": group_items(items),
             "basic_fields": BASIC_FIELDS,
+            "package_format_version": PACKAGE_FORMAT_VERSION,
+            "template_name": TEMPLATE_NAME,
             "limits": {
                 "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
                 "max_image_size": MAX_IMAGE_SIZE,
                 "max_images_per_field": MAX_IMAGES_PER_FIELD,
+                "zip_max_bytes": ZIP_MAX_BYTES,
             },
         }
     )
@@ -1097,6 +1138,7 @@ def api_report():
     report_groups = group_items(report_items)
     attention_items = build_attention_items(report_items)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    manifest = build_package_manifest(report_base_info, issue_no, generated_at, "final", "pc", stats)
 
     report_html = render_template(
         "report.html",
@@ -1111,15 +1153,17 @@ def api_report():
         generated_at=generated_at,
     )
 
-    report_filename = slug + ".html"
-    report_path = output_dir / report_filename
+    report_path = output_dir / "report.html"
+    manifest_path = output_dir / "manifest.json"
     data_path = output_dir / "report_data.json"
     zip_path = output_dir / (slug + ".zip")
 
     report_path.write_text(report_html, encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     data_path.write_text(
         json.dumps(
             {
+                "format_version": PACKAGE_FORMAT_VERSION,
                 "base_info": report_base_info,
                 "issue_no": issue_no,
                 "stats": stats,

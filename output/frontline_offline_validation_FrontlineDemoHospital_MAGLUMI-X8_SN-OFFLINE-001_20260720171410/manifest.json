@@ -1,0 +1,32 @@
+{
+  "format_version": "frontline-report-v2",
+  "template_name": "frontline-template.xlsx",
+  "tool_version": "V1.4",
+  "app_name": "jump-check-tool",
+  "export_client": "mobile_offline_simulation",
+  "report_status": "final",
+  "issue_no": "FrontlineDemoHospital*MAGLUMI-X8*SN-OFFLINE-001_20260720171410",
+  "generated_at": "2026-07-20 17:14:11",
+  "zip_max_bytes": 524288000,
+  "summary": {
+    "hospital": "FrontlineDemoHospital",
+    "model": "MAGLUMI-X8",
+    "serial": "SN-OFFLINE-001"
+  },
+  "stats": {
+    "total_items": 39,
+    "completed_items": 39,
+    "uncompleted_items": 0,
+    "required_text_total": 23,
+    "required_text_done": 23,
+    "missing_image_count": 0,
+    "uploaded_image_count": 44,
+    "compressed_image_count": 44,
+    "normal_count": 37,
+    "abnormal_count": 37,
+    "handled_count": 2,
+    "pending_count": 2,
+    "attention_count": 39,
+    "passed": true
+  }
+}

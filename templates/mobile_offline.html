@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>离线一线采集｜免疫跳值排查反馈报告生成工具 V1.4</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --line: #dce3e7;
+      --text: #17212b;
+      --muted: #697582;
+      --accent: #0d6b68;
+      --accent-soft: #e5f3f1;
+      --danger: #b42318;
+      --warn: #b7791f;
+      --ok: #087443;
+      --shadow: 0 14px 36px rgba(19, 32, 41, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, textarea, select { font: inherit; }
+    button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 0 12px;
+      cursor: pointer;
+    }
+    button.primary { border-color: var(--accent); background: var(--accent); color: #fff; font-weight: 700; }
+    button.warn { border-color: #f0c36a; background: #fff8e7; color: #8a5b00; }
+    button.danger { border-color: #f7b8b0; background: #fff1ef; color: var(--danger); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    .app-header h1 { margin: 0; font-size: 18px; line-height: 1.25; }
+    .app-header p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      border-radius: 999px;
+      padding: 0 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .shell { width: min(1040px, calc(100vw - 20px)); margin: 12px auto 34px; display: grid; gap: 12px; }
+    .card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow); overflow: hidden; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 14px; border-bottom: 1px solid var(--line); background: #fbfcfd; }
+    .card-head h2 { margin: 0; font-size: 16px; }
+    .card-body { padding: 14px; }
+    .notice { border-left: 4px solid var(--accent); background: #f4fbfa; color: #214744; padding: 10px 12px; line-height: 1.55; }
+    .notice.warn { border-color: var(--warn); background: #fff8e8; color: #6f4d11; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .draft-grid { display: grid; gap: 8px; }
+    .draft-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+    }
+    .draft-row strong { display: block; line-height: 1.4; }
+    .draft-row span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .basic-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .field { display: grid; gap: 6px; }
+    .field.problem { grid-column: 1 / -1; }
+    .field span { color: var(--muted); font-size: 12px; }
+    .field b { color: var(--danger); margin-left: 2px; }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      padding: 10px 11px;
+      min-height: 42px;
+    }
+    textarea { resize: vertical; line-height: 1.55; }
+    input.has-error, textarea.has-error { border-color: var(--danger); background: #fff8f7; }
+    .stats-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); }
+    .stat { min-height: 72px; background: #fff; padding: 11px; }
+    .stat span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    .stat strong { font-size: 20px; }
+    .progress-track { height: 8px; border-radius: 999px; background: #e8eef1; overflow: hidden; margin-top: 8px; }
+    .progress-track i { display: block; height: 100%; width: 0; background: var(--accent); }
+    .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .filter-bar button.active { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .item-list { display: grid; gap: 10px; padding: 12px; }
+    .item-card { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
+    .item-card.has-error { border-color: #efb0a8; }
+    .item-head { display: flex; justify-content: space-between; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); background: #fbfcfd; }
+    .item-head h3 { margin: 0; font-size: 15px; line-height: 1.45; }
+    .item-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .tag { display: inline-flex; align-items: center; height: 24px; border-radius: 999px; padding: 0 8px; background: #eef3f4; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .tag.required { background: #fff1ef; color: var(--danger); }
+    .item-body { display: grid; gap: 10px; padding: 12px; }
+    .detail { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; }
+    .detail span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    .detail p { margin: 0; white-space: pre-wrap; line-height: 1.55; }
+    .record-grid { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 10px; }
+    .photo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .photo-box { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fff; }
+    .photo-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .photo-head span { color: var(--muted); font-size: 12px; }
+    .photo-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .photo-actions input { display: none; }
+    .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+    .thumb { position: relative; height: 86px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #f8fafb; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb button { position: absolute; right: 4px; top: 4px; min-height: 26px; height: 26px; border-radius: 999px; padding: 0 8px; background: rgba(255,255,255,.92); color: var(--danger); }
+    .empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; min-height: 58px; display: grid; place-items: center; font-size: 13px; }
+    .errors { display: grid; gap: 7px; }
+    .error-line { border: 1px solid #f3b5ae; border-radius: 8px; background: #fff5f3; color: var(--danger); padding: 9px 10px; line-height: 1.5; }
+    .toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 30; max-width: min(560px, calc(100vw - 24px)); border-radius: 999px; background: rgba(22,32,42,.94); color: #fff; padding: 10px 14px; box-shadow: var(--shadow); }
+    .hidden { display: none !important; }
+    @media (max-width: 760px) {
+      .app-header { align-items: flex-start; }
+      .basic-grid, .stats-grid, .record-grid, .photo-row { grid-template-columns: 1fr; }
+      .draft-row { grid-template-columns: 1fr; }
+      .actions button { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>离线一线采集</h1>
+      <p>免疫跳值排查反馈报告生成工具 V1.4｜单文件 HTML｜模板：免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx</p>
+    </div>
+    <span id="saveStatus" class="status-pill">正在初始化</span>
+  </header>
+
+  <main class="shell">
+    <section class="card">
+      <div class="card-body">
+        <div id="browserNotice" class="notice">
+          请用 Safari、Chrome、Edge 或手机系统浏览器打开本文件。微信只作为传文件渠道，不建议在微信内置浏览器里长时间填写。
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>草稿与导出</h2>
+        <span id="currentDraftLabel" class="tag">未选择</span>
+      </div>
+      <div class="card-body">
+        <div class="actions">
+          <button id="newDraftBtn" type="button">新建报告</button>
+          <button id="saveNowBtn" type="button">立即保存</button>
+          <button id="exportFinalBtn" type="button" class="primary">导出正式ZIP</button>
+          <button id="exportDraftBtn" type="button" class="warn">导出草稿ZIP</button>
+        </div>
+        <div id="draftList" class="draft-grid" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>基础信息</h2><span class="tag required">正式导出前必填</span></div>
+      <div class="card-body">
+        <form id="baseForm" class="basic-grid">
+          
+            <label class="field hospital" for="base_hospital">
+              <span>医院名称<b>*</b></span>
+              
+                <input id="base_hospital" name="hospital" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field model" for="base_model">
+              <span>设备型号<b>*</b></span>
+              
+                <input id="base_model" name="model" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field serial" for="base_serial">
+              <span>设备序列号<b>*</b></span>
+              
+                <input id="base_serial" name="serial" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field software" for="base_software">
+              <span>软件版本<b>*</b></span>
+              
+                <input id="base_software" name="software" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field jump_project" for="base_jump_project">
+              <span>跳值项目<b>*</b></span>
+              
+                <input id="base_jump_project" name="jump_project" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field problem" for="base_problem">
+              <span>问题描述<b>*</b></span>
+              
+                <textarea id="base_problem" name="problem" rows="3" data-required="1"></textarea>
+              
+            </label>
+          
+            <label class="field engineer" for="base_engineer">
+              <span>排查工程师<b>*</b></span>
+              
+                <input id="base_engineer" name="engineer" type="text" data-required="1">
+              
+            </label>
+          
+            <label class="field check_date" for="base_check_date">
+              <span>排查日期<b>*</b></span>
+              
+                <input id="base_check_date" name="check_date" type="date" data-required="1">
+              
+            </label>
+          
+            <label class="field contact" for="base_contact">
+              <span>联系方式</span>
+              
+                <input id="base_contact" name="contact" type="text" data-required="0">
+              
+            </label>
+          
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="stats-grid">
+        <div class="stat"><span>总排查项</span><strong id="statTotal">0</strong></div>
+        <div class="stat"><span>已完成</span><strong id="statDone">0</strong></div>
+        <div class="stat"><span>未完成</span><strong id="statTodo">0</strong></div>
+        <div class="stat"><span>照片数量</span><strong id="statPhotos">0</strong></div>
+        <div class="stat">
+          <span>完成度</span><strong id="statPercent">0%</strong>
+          <div class="progress-track"><i id="progressBar"></i></div>
+        </div>
+      </div>
+      <div id="errorPanel" class="card-body hidden">
+        <div id="errorList" class="errors"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="filter-bar">
+        <button type="button" class="active" data-filter="all">全部</button>
+        <button type="button" data-filter="todo">未完成</button>
+        <button type="button" data-filter="photo">缺照片</button>
+        <button type="button" data-filter="record">缺记录</button>
+        <button type="button" data-filter="attention">异常/已处理/待确认</button>
+      </div>
+      <div id="itemList" class="item-list"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    window.OFFLINE_CONFIG = {
+      appName: "\u514d\u75ab\u8df3\u503c\u6392\u67e5\u53cd\u9988\u62a5\u544a\u751f\u6210\u5de5\u5177",
+      version: "V1.4",
+      templateName: "\u514d\u75ab\u4ea7\u54c1_\u8df3\u503c\u95ee\u9898\u7528\u670d\u5de5\u7a0b\u5e08\u6392\u67e5\u53cd\u9988\u8868_V1.0_CN.xlsx",
+      packageFormatVersion: "frontline-report-v2",
+      zipMaxBytes: 524288000,
+      maxImagesPerField: 5,
+      maxImageSize: 5242880,
+      basicFields: [{"key": "hospital", "label": "\u533b\u9662\u540d\u79f0", "required": true}, {"key": "model", "label": "\u8bbe\u5907\u578b\u53f7", "required": true}, {"key": "serial", "label": "\u8bbe\u5907\u5e8f\u5217\u53f7", "required": true}, {"key": "software", "label": "\u8f6f\u4ef6\u7248\u672c", "required": true}, {"key": "jump_project", "label": "\u8df3\u503c\u9879\u76ee", "required": true}, {"key": "problem", "label": "\u95ee\u9898\u63cf\u8ff0", "required": true}, {"key": "engineer", "label": "\u6392\u67e5\u5de5\u7a0b\u5e08", "required": true}, {"key": "check_date", "label": "\u6392\u67e5\u65e5\u671f", "required": true}, {"key": "contact", "label": "\u8054\u7cfb\u65b9\u5f0f", "required": false}],
+      templateItems: [{"action": "1. \u7b5b\u9009\u548c\u67e5\u770b\u6545\u969c\u65e5\u671f\u524d\u540e\u7684\u62a5\u8b66\u548c\u7ef4\u4fee\u8bb0\u5f55\uff0c\u4f18\u5148\u4fee\u590d\u8bbe\u5907\u5f53\u4e0b\u5b58\u5728\u7684\u5fc5\u53d1\u6216\u5076\u53d1\u786c\u4ef6\u7c7b\u6545\u969c\u3002\n2. \u68c0\u67e5\u7cfb\u7edf\u8bbe\u7f6e\uff0c\u5982\u81ea\u52a8\u7ef4\u62a4\u8bbe\u7f6e\u3001\u5e95\u7269\u6c14\u6ce1\u68c0\u6d4b\u8bbe\u7f6e", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u8bbe\u5907\u62a5\u8b66\u6392\u67e5", "display_step": "\u7b2c1\u6b65", "execution": "\u662f", "id": "item_001", "index": 1, "priority": "\u9ad8", "record_required": true, "record_template": "\u63d0\u4f9b\u8bbe\u5907\u534a\u5e74\u5185\u7ef4\u4fee\u548c\u7ef4\u62a4\u8bb0\u5f55\uff0c\u53ca\u5176\u5907\u4ef6\u66f4\u6362\u60c5\u51b5\u3002\n\u6309\u65f6\u95f4\u987a\u5e8f\u68b3\u7406\uff0c\u7b80\u8981\u603b\u7ed3\u7ef4\u4fee\u6392\u67e5\u8fc7\u7a0b\uff1b", "sort_order": 100, "standard": "1. \u4fee\u590d\u53d1\u73b0\u7684\u6545\u969c\u62a5\u8b66\uff0c\u5982xx\u68c0\u6d4b\u5230\u6c14\u6ce1\u3001\u78c1\u5206\u79bb\u5438\u6db2\u9488\u5835\u9488\u3001\u6548\u5e94\u68c0\u6d4b\u5931\u8d25\u7b49\n2. \u65e5\u5e38\u6e05\u6d01\u3001\u5e95\u7269\u6c14\u6ce1\u68c0\u6d4b\u5149\u8026\u672a\u88ab\u5c4f\u853d\uff1b\u6548\u5e94\u68c0\u6d4b\u65f6\u95f4\u95f4\u9694\u4e0d\u5927\u4e8e6h\u3002", "step": "\u7b2c1\u6b65"}, {"action": "1. \u5bfc\u51fa\u4f4d\u7f6e\u53c2\u6570\n2. \u67e5\u770b\u8f6f\u4ef6\u7248\u672c", "after_required": true, "after_template": "\u5bfc\u51fa\u8c03\u8bd5\u540e\u4f4d\u7f6e\u53c2\u6570\uff1b\n\u62cd\u56fe\u8bb0\u5f55\u64cd\u4f5c\u8f6f\u4ef6\u7248\u672c\u53f7", "before_required": true, "before_template": "\u5bfc\u51fa\u8c03\u8bd5\u524d\u4f4d\u7f6e\u53c2\u6570", "category": "\u6570\u636e\u5907\u4efd", "display_step": "\u7b2c2\u6b65", "execution": "\u662f", "id": "item_002", "index": 2, "priority": "\u9ad8", "record_required": true, "record_template": "\u64cd\u4f5c\u8f6f\u4ef6\u7248\u672c\u53f7\uff1a", "sort_order": 200, "standard": "1. \u5bfc\u51fa\u8c03\u8bd5\u524d\u4e0e\u8c03\u8bd5\u540e\u7684\u4f4d\u7f6e\u53c2\u6570\uff1b\n2. \u8f6f\u4ef6\u5e94\u4e3a\u6700\u65b0\u7248\u672c\uff08\u82e5\u5ba2\u6237\u7aef\u4f7f\u7528\u7279\u6b8a\u7248\u672c\uff0c\u53ef\u6682\u4e0d\u5347\u7ea7\u8f6f\u4ef6\uff09", "step": "\u7b2c2\u6b65"}, {"action": "\u6392\u67e5\u4eea\u5668\u7535\u6e90\u63a5\u53e3\u5904\u96f6\u5730\u7535\u538b\u3001\u6392\u6c34\u7ba1\u8def\u3001\u4eea\u5668\u4f9b\u7535\u63d2\u6392\u3001 \u5468\u8fb9\u7535\u78c1\u5e72\u6270\u8bbe\u5907", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u8bbe\u5907\u5468\u8fb9\u73af\u5883\u68c0\u67e5", "display_step": "\u7b2c3\u6b65", "execution": "\u662f", "id": "item_003", "index": 3, "priority": "\u9ad8", "record_required": true, "record_template": "\u4eea\u5668\u63a5\u5934\u7aef\u6d4b\u96f6\u5730\u7535\u538b\uff1a    V;\n\u4f9b\u7535\u9891\u7387\uff1a   HZ", "sort_order": 300, "standard": "\u5ba2\u6237\u7aef\u91c7\u7528UPS\u4f9b\u7535\n\u4eea\u5668\u548c\u7535\u8111\u7535\u6e90\u63a5\u53e3\u5904\u96f6\u5730\u7535\u538b\u5c0f\u4e8e5v\uff1b\n\u4eea\u5668\u548c\u7535\u8111\u4f9b\u7535\u63d2\u5934\u3001\u63d2\u6392\u65e0\u677e\u8131\u548c\u63a5\u89e6\u4e0d\u826f\uff1b\n\u4eea\u5668\u8fdc\u79bb\u7a7a\u8c03\u53e3\u3001\u51b0\u7bb1\u3001\u79bb\u5fc3\u673a\uff1b\u79d1\u5ba4\u9644\u8fd1\u697c\u5c42\u65e0\u653e\u5c04\u8bbe\u5907\uff1b\n\u8bbe\u5907\u5916\u90e8\u5e9f\u6db2\u6392\u653e\u7ba1\u8def\u65e0\u538b\u6298\uff0c\u65e0\u6392\u6c34\u4e0d\u7545\u60c5\u51b5\uff1b \u8bbe\u5907\u5185\u90e8\u771f\u7a7a\u5bb9\u5668\u65e0\u79ef\u6db2\u73b0\u8c61\u3002", "step": "\u7b2c3\u6b65"}, {"action": "\u65e5\u5e38\u64cd\u4f5c\u89c4\u8303\u6027", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u64cd\u4f5c\u89c4\u8303\u6027", "display_step": "\u7b2c4\u6b65", "execution": "\u662f", "id": "item_004", "index": 4, "priority": "\u9ad8", "record_required": true, "record_template": "\u6709\u5f02\u5e38\u5219\u62cd\u7167", "sort_order": 400, "standard": "\u53cd\u5e94\u676f\u662f\u5426\u7528\u6210\u5176\u4ed6\u5382\u5bb6\uff1b\u5e95\u7269\u6495\u819c\u3001\u62e7\u76d6", "step": "\u7b2c4\u6b65"}, {"action": "\u6574\u673a\u8fd0\u52a8\u90e8\u4ef6\u7070\u5c18\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c5\u6b65", "execution": "\u662f", "id": "item_005", "index": 5, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 500, "standard": "\u4ee5\u4e0b\u4f4d\u7f6e\u5e94\u65e0\u660e\u663e\u79ef\u5c18\uff1a\n1\u3001\u7b2c\u4e00\u6293\u676f\u624b\u9762\u58f3\n2\u3001\u6837\u672c\u9488\u6447\u81c2\u9762\u58f3\n3\u3001\u8bd5\u5242\u9488\u6447\u81c2\u9762\u58f3\n4\u3001\u7b2c\u4e8c\u6293\u676f\u624b\u9762\u58f3\n5\u3001\u53cd\u5e94\u676f\u76d2\u5b58\u653e\u533a\uff08CL-6000i\u6599\u6597)\n6\u3001\u5206\u79bb\u6db2\u6876\u76d6", "step": "\u7b2c5\u6b65"}, {"action": "\u6837\u672c\u9488\u548c\u8bd5\u5242\u9488\u5185\u5916\u58c1\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c6\u6b65", "execution": "\u662f", "id": "item_006", "index": 6, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 600, "standard": "\u6e05\u6d01\u9488\u5916\u58c1\uff0c\u5916\u58c1\u5149\u4eae\u3001\u65e0\u8089\u773c\u53ef\u89c1\u51dd\u80f6\u6216\u5176\u4ed6\u6c61\u67d3\u7269\u3002", "step": "\u7b2c6\u6b65"}, {"action": "\u89c6\u68c0\u548c\u6e05\u6d01\u6c60\u6e05\u6d01", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c7\u6b65", "execution": "\u662f", "id": "item_007", "index": 7, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 700, "standard": "1.\u4f7f\u7528\u68c9\u7b7e\u8638\u53d610\u500d\u7a00\u91ca\u540e\u7684CD80\uff08CL-6000i\u8638\u7a00\u91ca\u540e\u63a2\u5934\u6e05\u6d17\u6db2\uff09\uff0c\u7136\u540e\u4f7f\u7528\u53bb\u79bb\u5b50\u6c34\u518d\u6b21\u64e6\u62ed\uff0c\u786e\u4fdd\u6e05\u6d17\u6c60\u5b54\u65e0\u8089\u773c\u53ef\u89c1\u7ed3\u6676\u6216\u51dd\u80f6\u7b49\u5f02\u7269\uff1b\n2. \u6e05\u6d17\u6c60\u4f53\u65e0\u88c2\u7eb9\u3001\u65e0\u6f0f\u6db2\u3002\n3. \u6e05\u6d17\u6c60\u56db\u4e2a\u5c0f\u5b54\u51fa\u6c34\u5747\u987a\u7545\uff0c\u6e05\u6d17\u5e95\u90e8\u5e9f\u6db2\u6392\u653e\u7ba1\u8def\u5185\u65e0\u6db2\u4f53\u7d2f\u79ef\u3002", "step": "\u7b2c7\u6b65"}, {"action": "\u6df7\u5300\u5b54\u3001\u52a0\u6837\u5b54\u6e05\u6d01", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c8\u6b65", "execution": "\u662f", "id": "item_008", "index": 8, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 800, "standard": "\u7528\u9152\u7cbe\u68c9\u64e6\u62ed\uff0c\u5b54\u5185\u65e0\u5f02\u7269", "step": "\u7b2c8\u6b65"}, {"action": "\u6837\u672c\u548c\u8bd5\u5242\u6ce8\u5c04\u5668", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6f0f\u6db2\u68c0\u67e5", "display_step": "\u7b2c9\u6b65", "execution": "\u662f", "id": "item_009", "index": 9, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 900, "standard": "\u65e0\u6f0f\u6db2\uff0c\u65e0\u6c14\u6ce1\uff1bS/R\u6ce8\u5c04\u56685\u4e2a\u56fa\u5b9a\u87ba\u9489\u65e0\u677e\u8131\u4e14\u4f7f\u7528\u65f6\u95f4\u4e0d\u5b9c\u8d85\u8fc7\u534a\u5e74\u3002", "step": "\u7b2c9\u6b65"}, {"action": "\u78c1\u5206\u79bb\u6e05\u6d17\u6ce8\u5c04\u5668\u3001S/R\u9488\u5185\u5916\u58c1\u6e05\u6d17\u6ce8\u5c04\u5668", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6f0f\u6db2\u68c0\u67e5", "display_step": "\u7b2c10\u6b65", "execution": "\u662f", "id": "item_010", "index": 10, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1000, "standard": "\u63a5\u5934\u53ca\u67f1\u585e\u5e94\u65e0\u6db2\u4f53\uff0c\u81ea\u5236\u6ce8\u5c04\u5668\u5b58\u5728\u767d\u8272\u7c89\u672b\u53ef\u63a5\u53d7", "step": "\u7b2c10\u6b65"}, {"action": "\u5e95\u7269\u76f8\u5173\u7ba1\u8def\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6f0f\u6db2\u68c0\u67e5", "display_step": "\u7b2c11\u6b65", "execution": "\u662f", "id": "item_011", "index": 11, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1100, "standard": "\u5e95\u7269\u7a7f\u523a\u9488-\u5e95\u7269\u9600-\u5e95\u7269\u6ce8\u5c04\u5668\u94fe\u8def\u4e0a\u7684\u63a5\u5934\u5904\u65e0\u6f0f\u6db2\uff1b\u82e5\u53d1\u73b0\u63a5\u5934\u5904\u5b58\u5728\u6f0f\u6db2\u6216\u7ed3\u6676\uff0c\u5219\u7d27\u56fa\u63a5\u5934\u540e\u6e05\u7406\u5e72\u51c0", "step": "\u7b2c11\u6b65"}, {"action": "S/R\u9488\u548c\u78c1\u5206\u79bb\u6ce8\u6db2\u7ba1\u8def\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6f0f\u6db2\u68c0\u67e5", "display_step": "\u7b2c12\u6b65", "execution": "\u662f", "id": "item_012", "index": 12, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1200, "standard": "\u7ba1\u8def\u63a5\u5934\u5904\u65e0\u6f0f\u6db2\u6216\u7ed3\u6676", "step": "\u7b2c12\u6b65"}, {"action": "\u8815\u52a8\u6cf5\u7ba1\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6f0f\u6db2\u68c0\u67e5", "display_step": "\u7b2c13\u6b65", "execution": "\u662f", "id": "item_013", "index": 13, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1300, "standard": "\u65e0\u626d\u8f6c\u6216\u7834\u88c2\u3001\u6cf5\u7ba1\u7c7b\u578b\u672a\u7528\u9519\uff1b\n\u6cf5\u7ba1\u5361\u5934\u5728\u69fd\u5185\uff0c\u6cf5\u7ba1\u538b\u677f\u87ba\u6bcd\u65e0\u677e\u52a8\n\u4f7f\u7528\u65f6\u95f4\u4e0d\u8d85\u8fc7\u534a\u5e74\uff08\u6ce8\u610f\u66f4\u6362\u65b9\u5f0f\uff1a\u88c5\u4e00\u6839\uff0c\u8815\u52a8\u6cf5\u8f6c10\u5708\uff0c\u4fdd\u8bc1\u6cf5\u7ba1\u65e0\u626d\u8f6c\uff09", "step": "\u7b2c13\u6b65"}, {"action": "\u78c1\u5206\u79bb\u76d8\u6ea2\u6d41\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c14\u6b65", "execution": "\u662f", "id": "item_014", "index": 14, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1400, "standard": "\u78c1\u5206\u79bb\u76d8\u5e95\u6ea2\u6d41\u7ba1\u82e5\u6709\u7ed3\u6676\u5219\u8868\u660e\u66fe\u6709\u6ea2\u6d41\uff0c\u9700\u7740\u91cd\u68c0\u6d4b\u76d8\u5b54\u5185\u90e8\uff0c\u786e\u4fdd\u65e0\u7ed3\u6676\u3001\u65e0\u5f02\u7269\u3001\u65e0\u6ea2\u6d41\u75d5\u8ff9\uff0c\u4e14\u5404\u6258\u676f\u5ea7\u8f6c\u52a8\u987a\u7545\u3002", "step": "\u7b2c14\u6b65"}, {"action": "\u6392\u67e5\u78c1\u5206\u79bb\u5438\u6db2\u9488", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c15\u6b65", "execution": "\u662f", "id": "item_015", "index": 15, "priority": "\u9ad8", "record_required": true, "record_template": "\u6700\u8fd1\u4e00\u6b21\u66f4\u6362\u65e5\u671f\u662f\uff1a\n\u62cd\u71674\u4e2a\u65e7\u5438\u6db2\u9488\u9488\u5c16", "sort_order": 1500, "standard": "\u78c1\u5206\u79bb\u5438\u6db2\u9488\u6309\u671f\u66f4\u6362\n\u65e7\u9488\u6e05\u6d17\u540e\u5907\u7528\uff1b", "step": "\u7b2c15\u6b65"}, {"action": "\u78c1\u5206\u79bb\u5438\u6db2\u6d41\u91cf", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u6d41\u91cf\u6d4b\u8bd5", "display_step": "\u7b2c16\u6b65", "execution": "\u662f", "id": "item_016", "index": 16, "priority": "\u9ad8", "record_required": true, "record_template": "\u7b2c\u4e00\u9636\u6db2\u6d41\u91cf\uff1a    ;\u7b2c\u4e8c\u9636\u6db2\u6d41\u91cf\uff1a   \n\u7b2c\u4e09\u9636\u6db2\u6d41\u91cf\uff1a    ;\u7b2c\u56db\u9636\u6db2\u6d41\u91cf\uff1a", "sort_order": 1600, "standard": "\u78c1\u5206\u79bb\u5438\u6db2\u6d41\u91cf\u6d4b140\u00b15 ul/s;", "step": "\u7b2c16\u6b65"}, {"action": "\u78c1\u5206\u79bb\u6ce8\u6db2\u9488\u6e05\u6d01", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c17\u6b65", "execution": "\u662f", "id": "item_017", "index": 17, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1700, "standard": "\u6da6\u6e7f\u7eb1\u5e03\u6e05\u6d01\u5916\u58c1\uff0c\u786e\u4fdd\u65e0\u7ed3\u6676", "step": "\u7b2c17\u6b65"}, {"action": "\u5e95\u7269\u6ce8\u5165\u9488", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c18\u6b65", "execution": "\u662f", "id": "item_018", "index": 18, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1800, "standard": "\u5e95\u7269\u6ce8\u5165\u9488\u65e0\u7ed3\u6676\uff0c\u7279\u6c1f\u9f99\u7ba1\u4f38\u51fa\u957f\u5ea6\u4e3a1.5mm\uff1b", "step": "\u7b2c18\u6b65"}, {"action": "\u53cd\u5e94\u76d8\u5b54\u5f02\u7269\u68c0\u67e5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u6e05\u6d01\u7ef4\u62a4", "display_step": "\u7b2c19\u6b65", "execution": "\u662f", "id": "item_019", "index": 19, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 1900, "standard": "\u76d8\u5b54\u5185\u5e72\u51c0\uff0c\u65e0\u5f02\u7269\u548c\u6b8b\u6db2\u3002\n\u6d4b\u5149\u5b54\u65e0\u5f02\u7269", "step": "\u7b2c19\u6b65"}, {"action": "\u65b0\u7248\u8f68\u9053\u5de5\u88c5\u8c03\u8bd5\u6837\u672c\u9488\u5728\u5e38\u89c4\u5438\u6837\u4f4d\u7f6e\uff0c\u5ba2\u6237\u7aef\u4f7f\u7528\u65b0\u7248\u6837\u672c\u67b6", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c20\u6b65", "execution": "\u662f", "id": "item_020", "index": 20, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2000, "standard": "\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185", "step": "\u7b2c20\u6b65"}, {"action": "\u65b0\u7248\u8f68\u9053\u5de5\u88c5\u8c03\u8bd5\u6837\u672c\u9488\u5728\u6025\u8bca\u901a\u9053\u5438\u6837\u4f4d\u7f6e\uff0c\u5ba2\u6237\u7aef\u4f7f\u7528\u65b0\u7248\u6837\u672c\u67b6", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c21\u6b65", "execution": "\u662f", "id": "item_021", "index": 21, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2100, "standard": "\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185", "step": "\u7b2c21\u6b65"}, {"action": "\u6837\u672c\u9488\u5728\u52a0\u6837\u4f4d\u7f6e\u6c34\u5e73\u548c\u5782\u76f4\u9ad8\u5ea6\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c22\u6b65", "execution": "\u662f", "id": "item_022", "index": 22, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2200, "standard": "\u6c34\u5e73\u4f4d\u7f6e\uff1a\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185\n\u5782\u76f4\u4f4d\u7f6e\uff1a\u5047\u9488\u62ac\u8d77\u9ad8\u5ea60.15mm", "step": "\u7b2c22\u6b65"}, {"action": "\u6837\u672c\u9488\u5728\u7a00\u91ca\u4f4d\u7f6e\u6c34\u5e73\u548c\u5782\u76f4\u9ad8\u5ea6\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c23\u6b65", "execution": "\u662f", "id": "item_023", "index": 23, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2300, "standard": "\u6c34\u5e73\u4f4d\u7f6e\uff1a\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185\n\u5782\u76f4\u4f4d\u7f6e\uff1a\u5047\u9488\u62ac\u8d77\u9ad8\u5ea60.15mm", "step": "\u7b2c23\u6b65"}, {"action": "\u6837\u672c\u9488\u5728\u6e05\u6d17\u4f4d\u7f6e\u7684\u6c34\u5e73\u548c\u5782\u76f4\u9ad8\u5ea6\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c24\u6b65", "execution": "\u662f", "id": "item_024", "index": 24, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2400, "standard": "\u6c34\u5e73\u4f4d\u7f6e\uff1a\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185\n\u5782\u76f4\u4f4d\u7f6e\uff1a\u5047\u9488\u62ac\u8d77\u9ad8\u5ea60.15mm", "step": "\u7b2c24\u6b65"}, {"action": "\u8bd5\u5242\u9488\u5728\u6e05\u6d17\u6c60\u6c34\u5e73\u548c\u5782\u76f4\u4f4d\u7f6e\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c25\u6b65", "execution": "\u662f", "id": "item_025", "index": 25, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2500, "standard": "\u6c34\u5e73\u4f4d\u7f6e\uff1a\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185\n\u5782\u76f4\u4f4d\u7f6e\uff1a\u5047\u9488\u62ac\u8d77\u9ad8\u5ea60.15mm", "step": "\u7b2c25\u6b65"}, {"action": "\u8bd5\u5242\u9488\u5728\u53cd\u5e94\u76d8\u6c34\u5e73\u548c\u5782\u76f4\u4f4d\u7f6e\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c26\u6b65", "execution": "\u662f", "id": "item_026", "index": 26, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2600, "standard": "\u6c34\u5e73\u4f4d\u7f6e\uff1a\u5047\u9488\u4e0b\u884c\u65f6\u53ef\u81ea\u7136\u8fdb\u5165\u5939\u5177\u5b9a\u4f4d\u5b54\u5185\n\u5782\u76f4\u4f4d\u7f6e\uff1a\u5047\u9488\u62ac\u8d77\u9ad8\u5ea60.15mm", "step": "\u7b2c26\u6b65"}, {"action": "\u6837\u672c\u9488\u548c\u8bd5\u5242\u9488\u5782\u76f4\u5ea6\u6392\u67e5\u548c\u6821\u6b63", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c27\u6b65", "execution": "\u662f", "id": "item_027", "index": 27, "priority": "\u9ad8", "record_required": false, "record_template": "N/A", "sort_order": 2700, "standard": "1\u3001\u91c7\u7528\u771f\u9488\uff0c\u65e0\u9700\u5176\u4ed6\u5939\u5177\u3002\u6267\u884c\u3010\u9488\u5728\u6e05\u6d17\u6c60\u6c34\u5e73\u4f4d\u7f6e\u3011\u8c03\u8bd5\u6d41\u7a0b\uff0c\u9488\u5c16\u5e94\u5728\u6e05\u6d17\u6c60\u4e2d\u5fc3\n2\u3001\u771f\u9488\u4e0b\u964d\u8fdb\u5165\u6e05\u6d17\u6c60\u5185\uff0c\u7c97\u9488\u90e8\u4f4d\u5904\u5728\u6e05\u6d17\u6c60\u4e2d\u5fc3", "step": "\u7b2c27\u6b65"}, {"action": "\u78c1\u5206\u79bb\u676f\u4f4d\u504f\u79fb\u91cf\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c28\u6b65", "execution": "\u662f", "id": "item_028", "index": 28, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2800, "standard": "\u78c1\u5206\u79bb\u676f\u4f4d\u504f\u79fb\u91cf\uff1a\u5939\u5177\u65cb\u8f6c\u987a\u7545", "step": "\u7b2c28\u6b65"}, {"action": "\u78c1\u5206\u79bb\u5438\u6db2\u4f4d\u7f6e\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c29\u6b65", "execution": "\u662f", "id": "item_029", "index": 29, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 2900, "standard": "\u78c1\u5206\u79bb\u5438\u6db2\u4f4d\u7f6e\uff1a\u5404\u5438\u6db2\u9488\u62ac\u8d77\u9ad8\u5ea61mm-1.5mm\u4e4b\u95f4", "step": "\u7b2c29\u6b65"}, {"action": "\u78c1\u5206\u79bb\u6ce8\u6db2\u4f4d\u7f6e\u8c03\u8bd5", "after_required": true, "after_template": "", "before_required": true, "before_template": "", "category": "\u4f4d\u7f6e\u8c03\u8bd5", "display_step": "\u7b2c30\u6b65", "execution": "\u662f", "id": "item_030", "index": 30, "priority": "\u9ad8", "record_required": true, "record_template": "\u8c03\u8bd5\u524d\u540e\u4f4d\u7f6e\u53d8\u5316\u5fae\u6b65\u6570\uff1a\n\u6c34\u5e73       \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u53f32\u5fae\u6b65\uff09\n\u5782\u76f4      \u5fae\u6b65\uff08\u4f8b\uff1a\u5411\u4e0b2\u5fae\u6b65\uff09", "sort_order": 3000, "standard": "\u6ce8\u6db2\u677f\u4e0e\u8c03\u8bd5\u5939\u5177\u4e4b\u95f4\u7684\u95f4\u9699\u57280\uff5e0.05mm\u4e4b\u95f4\uff0c\u7136\u540e\u518d\u4e0b\u964d20\u5fae\u6b65\u3002CL-2000i\u539f\u578b\u673a\u8c03\u8bd5\u65b9\u5f0f\u7565\u6709\u5dee\u5f02\uff0c\u8be6\u89c1\u8c03\u8bd5\u6307\u5357", "step": "\u7b2c30\u6b65"}, {"action": "\u6e05\u6d17\u6c60\u6d41\u91cf", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u6d41\u91cf\u6d4b\u8bd5", "display_step": "\u7b2c31\u6b65", "execution": "\u662f", "id": "item_031", "index": 31, "priority": "\u4f4e", "record_required": true, "record_template": "\u76ee\u6807\u6d41\u91cf\uff1a    \n\u5b9e\u9645\u6d41\u91cf\uff1a", "sort_order": 3100, "standard": "\u6307\u6807\u7b26\u5408\u8f6f\u4ef6\u5185\u663e\u793a\u7684\u76ee\u6807\u8303\u56f4", "step": "\u7b2c31\u6b65"}, {"action": "\u6837\u672c\u9488\u3001\u8bd5\u5242\u9488\u5185\u58c1\u6e05\u6d17\u6d41\u91cf", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u6d41\u91cf\u6d4b\u8bd5", "display_step": "\u7b2c32\u6b65", "execution": "\u662f", "id": "item_032", "index": 32, "priority": "\u4f4e", "record_required": true, "record_template": "\u76ee\u6807\u6d41\u91cf\uff1a    \n\u5b9e\u9645\u6d41\u91cf\uff1a", "sort_order": 3200, "standard": "\u6307\u6807\u7b26\u5408\u8f6f\u4ef6\u5185\u663e\u793a\u7684\u76ee\u6807\u8303\u56f4", "step": "\u7b2c32\u6b65"}, {"action": "\u6697\u8ba1\u6570\u6d4b\u8bd5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u5149\u5b66", "display_step": "\u7b2c33\u6b65", "execution": "\u662f", "id": "item_033", "index": 33, "priority": "\u9ad8", "record_required": true, "record_template": "\u6697\u8ba1\u6570\u6700\u5927\u503c\uff1a", "sort_order": 3300, "standard": "\u53cd\u5e94\u76d8\u5916\u5708\u5168\u90e8\u676f\u4f4d\u6697\u8ba1\u6570\u503c\u5728200\u4ee5\u5185", "step": "\u7b2c33\u6b65"}, {"action": "\u5149\u5b66\u76f8\u5173\u8bca\u65ad", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u5149\u5b66", "display_step": "\u7b2c34\u6b65", "execution": "\u662f", "id": "item_034", "index": 34, "priority": "\u4f4e", "record_required": true, "record_template": "\u62cd\u7167", "sort_order": 3400, "standard": "\u57fa\u7840\u6027\u80fd\u6d4b\u8bd5\u754c\u9762\u5185DCF\u3001\u5149\u8ba1\u6570\u7a33\u5b9a\u6027\u3001\u5149\u8ba1\u6570\u91cd\u590d\u6027\u901a\u8fc7", "step": "\u7b2c34\u6b65"}, {"action": "\u672c\u5e95\u6d4b\u8bd5", "after_required": true, "after_template": "", "before_required": false, "before_template": "N/A", "category": "\u672a\u5206\u7c7b", "display_step": "\u7b2c35\u6b65-1", "execution": "\u662f", "id": "item_035", "index": 35, "priority": "\u6392\u67e5\u540e\u9a8c\u8bc1", "record_required": false, "record_template": "\u62cd\u7167\u8bb0\u5f55\u6392\u67e5\u8fc7\u7a0b\u4e2d\u7684\u6bcf\u6b21\u6d4b\u8bd5\u7ed3\u679c\uff1b\n\u8fd4\u56de\u6027\u80fd\u6d4b\u8bd5\u6570\u636e\u6587\u4ef6\uff1a\nCL6000i\u76ee\u5f55\uff1aD:\\Mindray\\OmniLab\\OperationSoft\\SAD_1_WorkDirectory\\Diagnostics\nCL2000i\uff081000i\uff09\u76ee\u5f55:  D:\\Mindray\\CL2000i\uff081000i\uff09\\OperationSoft\\Instrument_1\\OperationSoft\\Instrument_1\\MaintenRecordLog\\EffectTestLog.csv", "sort_order": 3501, "standard": "\u8fde\u7eed2\u6b21\u6d4b\u8bd5\u7ed3\u679c\uff1aSD\u503c\u5c0f\u4e8e100\uff1b\u5747\u503c\u57283900\u00b1500\u5de6\u53f3\uff1b\u6d4b\u8bd5\u672a\u901a\u8fc7\u5219\u53c2\u8003\u300aCL-2000i\u672c\u5e95\u4e0d\u8fc7\u6392\u67e5\u6307\u5357\u300b", "step": "\u7b2c35\u6b65-1"}, {"action": "\u6837\u672c\u9488\u548c\u8bd5\u5242\u9488\u52a0\u6837\u91cd\u590d\u6027\u6d4b\u8bd5", "after_required": true, "after_template": "", "before_required": false, "before_template": "", "category": "\u672a\u5206\u7c7b", "display_step": "\u7b2c35\u6b65-2", "execution": "\u662f", "id": "item_035_2", "index": 35, "priority": "\u6392\u67e5\u540e\u9a8c\u8bc1", "record_required": false, "record_template": "", "sort_order": 3502, "standard": "\u8fde\u7eed2\u6b21\u6d4b\u8bd5\u7ed3\u679c\uff1aCV\u503c\u57281.5%\u5185\u3001\uff08\u8bd5\u5242\u9488\u53d1\u5149\u5747\u503c200w\u5de6\u53f3\uff0c\u6837\u672c\u9488\u53d1\u5149\u5747\u503c100w\u5de6\u53f3\uff0c\u4e8c\u8005\u6bd4\u503c\u57282\u5de6\u53f3\uff09\n\u53c2\u8003\u300a\u5e95\u7269\u672c\u5e95\u6b63\u5e38\u3001\u52a0\u6837\u6027\u80fd\u4e0d\u8fc7\u6392\u67e5\u6307\u5357\u300b\uff1b\u82e5\u591a\u6b21\u6d4b\u8bd5\u4f9d\u65e7\u4e0d\u8fbe\u6807\uff0c\u53ef\u91c7\u7528\u7814\u53d1\u6743\u9650\u4e0b\u57fa\u7840\u6027\u80fd\u6d4b\u8bd5\u4e2d\u7684\u52a0\u6837\u91cd\u590d\u6027\u6d4b\u8bd5\uff0c\u8be6\u7ec6\u8054\u7cfb\u5bf9\u5e94\u4ea7\u54c1TS\u3002", "step": "\u7b2c35\u6b65-2"}, {"action": "\u6e05\u6d17\uff08\u7f13\u51b2\uff09\u6db2\u68c0\u6d4b", "after_required": true, "after_template": "", "before_required": false, "before_template": "", "category": "\u672a\u5206\u7c7b", "display_step": "\u7b2c35\u6b65-3", "execution": "\u662f", "id": "item_035_3", "index": 35, "priority": "\u6392\u67e5\u540e\u9a8c\u8bc1", "record_required": false, "record_template": "", "sort_order": 3503, "standard": "\u6d4b\u8bd5\u7ed3\u679c\u5728\u3010-500,500\u3011\u5185\uff0c\u68c0\u6d4b\u5931\u8d25\u5219\u8003\u8651\u6e05\u6d17\u5206\u79bb\u6db2\u7ba1\u8def\u3002", "step": "\u7b2c35\u6b65-3"}, {"action": "\u4f4e\u503c\u8d28\u63a7\u91cd\u590d\u6027\u6d4b\u8bd5", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u672a\u5206\u7c7b", "display_step": "\u7b2c35\u6b65-4", "execution": "\u662f", "id": "item_035_4", "index": 35, "priority": "\u6392\u67e5\u540e\u9a8c\u8bc1", "record_required": true, "record_template": "\u7ed3\u679c\u754c\u9762\u5bfc\u51fa\u6d4b\u8bd5\u7ed3\u679c\u6570\u636e", "sort_order": 3504, "standard": "\u5982\u8df3\u503c\u6982\u7387\u003e1%\uff0c\u5373\u6d4b\u8bd5200\u6b21\u3002\n\u5982\u8df3\u503c\u6982\u7387\u4e0e\u8be5\u9879\u76ee\u6b63\u5e38\u8868\u73b0\u76f8\u5f53\uff0c\u4e0d\u5efa\u8bae\u6d4b\u8bd5\u3002\n\u91cd\u590d\u6027\u9a8c\u8bc1\u987b\u91c7\u7528\u8d28\u63a7\u6db2\uff0c\u4e0d\u53ef\u4f7f\u7528\u8840\u6e05\u66ff\u4ee3\u3002", "step": "\u7b2c35\u6b65-4"}, {"action": "\u4e0a\u8ff0\u6392\u67e5\u5168\u90e8\u6267\u884c\u5b8c\u6bd5\uff0c\u6309\u5404\u4e2a\u673a\u578b\u65e5\u5fd7\u53cd\u9988\u8868\u8fd4\u56de\u76f8\u5173\u65e5\u5fd7\u3002", "after_required": false, "after_template": "N/A", "before_required": false, "before_template": "N/A", "category": "\u672a\u5206\u7c7b", "display_step": "\u7b2c36\u6b65", "execution": "\u662f", "id": "item_036", "index": 36, "priority": "\u65e5\u5fd7\u53cd\u9988", "record_required": true, "record_template": "\u5b9a\u6807\u548c\u6d4b\u8bd5\u6570\u636e\u8bf7\u5728\u5bf9\u5e94\u754c\u9762\u5907\u4efd\u4e3aCSV\u6587\u4ef6", "sort_order": 3600, "standard": "\u5305\u62ec\u4f46\u4e0d\u9650\u4e8e\u6545\u969c\u53d1\u751f\u5f53\u5929\u548c\u524d\u540e\u4e00\u5929\u3001\u6392\u67e5\u5904\u7406\u5f53\u5929\u7684\u65e5\u5fd7\uff1b\u4fdd\u8bc1\u8fdc\u7a0b\u53ef\u6b63\u5e38\u8fde\u63a5", "step": "\u7b2c36\u6b65"}]
+    };
+
+    (function () {
+      const config = window.OFFLINE_CONFIG;
+      const DB_NAME = "jumpCheckOfflineFrontlineV1";
+      const DB_VERSION = 1;
+      const REPORT_STORE = "reports";
+      const PHOTO_STORE = "photos";
+      const TARGET_IMAGE_SIZE = 2 * 1024 * 1024;
+      const MAX_CLIENT_SIDE = 1800;
+      const FIELD_LABELS = {
+        before_images: "原始状态照片",
+        after_images: "调试或维护后照片"
+      };
+      const CONCLUSIONS = ["正常", "异常", "已处理", "待确认"];
+      const state = {
+        db: null,
+        draftId: "",
+        report: null,
+        drafts: [],
+        previewUrls: {},
+        filter: "all",
+        saveTimer: null,
+        lastErrors: []
+      };
+
+      document.addEventListener("DOMContentLoaded", init);
+      window.addEventListener("pagehide", function () { saveNow(); });
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) saveNow();
+      });
+
+      async function init() {
+        setSaveStatus("初始化缓存");
+        state.db = await openDb();
+        bindEvents();
+        warnWechatBrowser();
+        await loadDrafts();
+        if (state.drafts.length) {
+          await openDraft(state.drafts[0].draft_id);
+        } else {
+          await createDraft();
+        }
+      }
+
+      function bindEvents() {
+        document.getElementById("newDraftBtn").addEventListener("click", createDraft);
+        document.getElementById("saveNowBtn").addEventListener("click", function () { saveNow(true); });
+        document.getElementById("exportFinalBtn").addEventListener("click", function () { exportZip("final"); });
+        document.getElementById("exportDraftBtn").addEventListener("click", function () { exportZip("draft"); });
+        document.getElementById("baseForm").addEventListener("input", function (event) {
+          if (!state.report || !event.target.name) return;
+          state.report.base_info[event.target.name] = event.target.value;
+          scheduleSave();
+          updateStatsAndErrors(false);
+          renderDraftLabel();
+        });
+        document.querySelectorAll("[data-filter]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            document.querySelectorAll("[data-filter]").forEach(function (item) { item.classList.remove("active"); });
+            button.classList.add("active");
+            state.filter = button.dataset.filter;
+            renderItems();
+          });
+        });
+      }
+
+      function warnWechatBrowser() {
+        const ua = navigator.userAgent || "";
+        if (/MicroMessenger/i.test(ua)) {
+          const node = document.getElementById("browserNotice");
+          node.classList.add("warn");
+          node.textContent = "当前看起来是在微信内置浏览器中打开。为避免长时间填写、照片缓存或ZIP导出失败，请点右上角菜单，选择在浏览器中打开。";
+        }
+      }
+
+      function openDb() {
+        if (!window.indexedDB) {
+          alert("当前浏览器不支持 IndexedDB，无法安全缓存照片。请换 Safari、Chrome 或 Edge。");
+          return Promise.reject(new Error("IndexedDB unavailable"));
+        }
+        return new Promise(function (resolve, reject) {
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = function () {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(REPORT_STORE)) db.createObjectStore(REPORT_STORE, { keyPath: "draft_id" });
+            if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE, { keyPath: "photo_id" });
+          };
+          request.onsuccess = function () { resolve(request.result); };
+          request.onerror = function () { reject(request.error || new Error("本地缓存打开失败")); };
+        });
+      }
+
+      function dbGetAll(store) {
+        return new Promise(function (resolve, reject) {
+          const tx = state.db.transaction(store, "readonly");
+          const request = tx.objectStore(store).getAll();
+          request.onsuccess = function () { resolve(request.result || []); };
+          request.onerror = function () { reject(request.error); };
+        });
+      }
+
+      function dbGet(store, key) {
+        return new Promise(function (resolve, reject) {
+          const tx = state.db.transaction(store, "readonly");
+          const request = tx.objectStore(store).get(key);
+          request.onsuccess = function () { resolve(request.result || null); };
+          request.onerror = function () { reject(request.error); };
+        });
+      }
+
+      function dbPut(store, row) {
+        return new Promise(function (resolve, reject) {
+          const tx = state.db.transaction(store, "readwrite");
+          const request = tx.objectStore(store).put(row);
+          request.onsuccess = function () { resolve(row); };
+          request.onerror = function () { reject(request.error); };
+        });
+      }
+
+      function dbDelete(store, key) {
+        return new Promise(function (resolve, reject) {
+          const tx = state.db.transaction(store, "readwrite");
+          const request = tx.objectStore(store).delete(key);
+          request.onsuccess = function () { resolve(); };
+          request.onerror = function () { reject(request.error); };
+        });
+      }
+
+      async function loadDrafts() {
+        state.drafts = (await dbGetAll(REPORT_STORE)).sort(function (a, b) {
+          return String(b.updated_at || "").localeCompare(String(a.updated_at || ""));
+        });
+        renderDrafts();
+      }
+
+      function blankReport() {
+        const now = isoNow();
+        const data = {};
+        config.templateItems.forEach(function (item) {
+          data[item.id] = {
+            id: item.id,
+            measured_value: "",
+            conclusion: "正常",
+            before_images: [],
+            after_images: []
+          };
+        });
+        const checkDate = new Date();
+        const yyyy = checkDate.getFullYear();
+        const mm = String(checkDate.getMonth() + 1).padStart(2, "0");
+        const dd = String(checkDate.getDate()).padStart(2, "0");
+        return {
+          draft_id: "offline_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
+          created_at: now,
+          updated_at: now,
+          base_info: { check_date: yyyy + "-" + mm + "-" + dd },
+          item_data: data,
+          last_exported_at: "",
+          last_issue_no: ""
+        };
+      }
+
+      async function createDraft() {
+        state.report = blankReport();
+        state.draftId = state.report.draft_id;
+        await saveNow();
+        await loadDrafts();
+        await hydratePreviews();
+        renderAll();
+        showToast("已新建离线报告。");
+      }
+
+      async function openDraft(draftId) {
+        const report = await dbGet(REPORT_STORE, draftId);
+        if (!report) return;
+        state.report = report;
+        state.draftId = draftId;
+        ensureReportShape();
+        await hydratePreviews();
+        renderAll();
+        setSaveStatus("已载入本机草稿");
+      }
+
+      async function deleteDraft(draftId) {
+        if (!confirm("确定删除这份草稿及本机照片缓存吗？")) return;
+        const report = await dbGet(REPORT_STORE, draftId);
+        if (report) {
+          Object.keys(report.item_data || {}).forEach(function (itemId) {
+            ["before_images", "after_images"].forEach(function (field) {
+              (report.item_data[itemId][field] || []).forEach(function (image) {
+                dbDelete(PHOTO_STORE, image.photo_id);
+              });
+            });
+          });
+        }
+        await dbDelete(REPORT_STORE, draftId);
+        Object.keys(state.previewUrls).forEach(function (key) { URL.revokeObjectURL(state.previewUrls[key]); });
+        state.previewUrls = {};
+        await loadDrafts();
+        if (state.drafts.length) await openDraft(state.drafts[0].draft_id);
+        else await createDraft();
+      }
+
+      function ensureReportShape() {
+        if (!state.report.base_info) state.report.base_info = {};
+        if (!state.report.item_data) state.report.item_data = {};
+        config.templateItems.forEach(function (item) {
+          if (!state.report.item_data[item.id]) {
+            state.report.item_data[item.id] = { id: item.id, measured_value: "", conclusion: "正常", before_images: [], after_images: [] };
+          }
+        });
+      }
+
+      function scheduleSave() {
+        window.clearTimeout(state.saveTimer);
+        setSaveStatus("保存中");
+        state.saveTimer = window.setTimeout(function () { saveNow(); }, 350);
+      }
+
+      async function saveNow(showMessage) {
+        if (!state.report) return;
+        state.report.updated_at = isoNow();
+        await dbPut(REPORT_STORE, state.report);
+        setSaveStatus("已保存 " + timeText());
+        if (showMessage) showToast("已保存到本机。");
+        await loadDrafts();
+      }
+
+      function renderAll() {
+        renderBaseForm();
+        renderDraftLabel();
+        renderItems();
+        updateStatsAndErrors(false);
+      }
+
+      function renderBaseForm() {
+        config.basicFields.forEach(function (field) {
+          const node = document.querySelector("[name='" + field.key + "']");
+          if (node) node.value = state.report.base_info[field.key] || "";
+        });
+      }
+
+      function renderDraftLabel() {
+        const base = state.report.base_info || {};
+        const label = [base.hospital || "未填医院", base.model || "未填机型", base.serial || "未填序列号"].join(" / ");
+        document.getElementById("currentDraftLabel").textContent = label;
+      }
+
+      function renderDrafts() {
+        const root = document.getElementById("draftList");
+        if (!state.drafts.length) {
+          root.innerHTML = '<div class="empty">暂无历史草稿</div>';
+          return;
+        }
+        root.innerHTML = state.drafts.map(function (draft) {
+          const base = draft.base_info || {};
+          const stats = computeStats(draft);
+          const title = [base.hospital || "未填医院", base.model || "未填机型", base.serial || "未填序列号"].join(" / ");
+          return [
+            '<div class="draft-row">',
+            '<div><strong>' + escapeHtml(title) + '</strong>',
+            '<span>最后保存：' + escapeHtml(draft.updated_at || "") + '｜完成：' + stats.completed_items + '/' + stats.total_items + '｜照片：' + stats.uploaded_image_count + '</span></div>',
+            '<div class="actions">',
+            '<button type="button" data-open-draft="' + escapeHtml(draft.draft_id) + '">继续</button>',
+            '<button type="button" class="danger" data-delete-draft="' + escapeHtml(draft.draft_id) + '">删除</button>',
+            '</div></div>'
+          ].join("");
+        }).join("");
+        root.querySelectorAll("[data-open-draft]").forEach(function (btn) {
+          btn.addEventListener("click", function () { openDraft(btn.dataset.openDraft); });
+        });
+        root.querySelectorAll("[data-delete-draft]").forEach(function (btn) {
+          btn.addEventListener("click", function () { deleteDraft(btn.dataset.deleteDraft); });
+        });
+      }
+
+      function itemData(itemId) {
+        return state.report.item_data[itemId];
+      }
+
+      function renderItems() {
+        const root = document.getElementById("itemList");
+        const errors = new Set((state.lastErrors || []).map(function (err) {
+          return (err.item_id || "") + "::" + (err.field || "");
+        }));
+        root.innerHTML = config.templateItems.filter(function (item) {
+          const data = itemData(item.id);
+          if (state.filter === "all") return true;
+          if (state.filter === "todo") return !isItemDone(item, data);
+          if (state.filter === "photo") return (item.before_required && !data.before_images.length) || (item.after_required && !data.after_images.length);
+          if (state.filter === "record") return item.record_required && !String(data.measured_value || "").trim();
+          if (state.filter === "attention") return ["异常", "已处理", "待确认"].includes(data.conclusion);
+          return true;
+        }).map(function (item) {
+          const data = itemData(item.id);
+          const itemHasError = state.lastErrors.some(function (err) { return err.item_id === item.id; });
+          return [
+            '<article class="item-card ' + (itemHasError ? "has-error" : "") + '" data-item-id="' + escapeHtml(item.id) + '">',
+            '<div class="item-head"><div><h3>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(item.action) + '</h3>',
+            '<p>分类：' + escapeHtml(item.category || "未分类") + '｜是否执行：是</p></div>',
+            '<span class="tag">' + escapeHtml(data.conclusion || "正常") + '</span></div>',
+            '<div class="item-body">',
+            '<div class="detail"><span>合格指标</span><p>' + escapeHtml(item.standard || "") + '</p></div>',
+            '<div class="record-grid">',
+            '<label class="field"><span>实测情况记录' + (item.record_required ? '<b>*</b>' : '') + '</span><textarea rows="4" data-record="' + escapeHtml(item.id) + '" class="' + (errors.has(item.id + "::measured_value") ? "has-error" : "") + '">' + escapeHtml(data.measured_value || "") + '</textarea></label>',
+            '<label class="field"><span>排查结论</span><select data-conclusion="' + escapeHtml(item.id) + '">' + CONCLUSIONS.map(function (value) { return '<option value="' + value + '"' + (value === data.conclusion ? " selected" : "") + '>' + value + '</option>'; }).join("") + '</select></label>',
+            '</div>',
+            '<div class="photo-row">',
+            renderPhotoBox(item, "before_images", errors),
+            renderPhotoBox(item, "after_images", errors),
+            '</div></div></article>'
+          ].join("");
+        }).join("") || '<div class="empty">当前筛选下没有排查项</div>';
+        bindItemEvents(root);
+      }
+
+      function renderPhotoBox(item, field, errors) {
+        const data = itemData(item.id);
+        const images = data[field] || [];
+        const required = field === "before_images" ? item.before_required : item.after_required;
+        const safe = item.id + "_" + field;
+        return [
+          '<div class="photo-box">',
+          '<div class="photo-head"><span>' + FIELD_LABELS[field] + (required ? ' <b style="color:#b42318">*</b>' : '') + '</span><span>' + images.length + '/' + config.maxImagesPerField + '</span></div>',
+          '<div class="photo-actions">',
+          '<label><button type="button" data-trigger="' + safe + '_camera">拍照</button><input id="' + safe + '_camera" type="file" accept="image/*" capture="environment" data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
+          '<label><button type="button" data-trigger="' + safe + '_album">选图</button><input id="' + safe + '_album" type="file" accept="image/*" multiple data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
+          '</div>',
+          images.length ? '<div class="photo-grid">' + images.map(function (image) {
+            return '<div class="thumb"><img src="' + escapeHtml(state.previewUrls[image.photo_id] || "") + '" alt="' + escapeHtml(image.original_name || "图片") + '"><button type="button" data-delete-photo="' + escapeHtml(image.photo_id) + '" data-delete-item="' + escapeHtml(item.id) + '" data-delete-field="' + field + '">删</button></div>';
+          }).join("") + '</div>' : '<div class="empty ' + (errors.has(item.id + "::" + field) ? "error-line" : "") + '">暂无照片</div>',
+          '</div>'
+        ].join("");
+      }
+
+      function bindItemEvents(root) {
+        root.querySelectorAll("[data-record]").forEach(function (node) {
+          node.addEventListener("input", function () {
+            itemData(node.dataset.record).measured_value = node.value;
+            scheduleSave();
+            updateStatsAndErrors(false);
+          });
+        });
+        root.querySelectorAll("[data-conclusion]").forEach(function (node) {
+          node.addEventListener("change", function () {
+            itemData(node.dataset.conclusion).conclusion = node.value || "正常";
+            scheduleSave();
+            renderItems();
+            updateStatsAndErrors(false);
+          });
+        });
+        root.querySelectorAll("[data-trigger]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            const input = document.getElementById(button.dataset.trigger);
+            if (input) input.click();
+          });
+        });
+        root.querySelectorAll("[data-photo-field]").forEach(function (input) {
+          input.addEventListener("change", function () {
+            addPhotos(input.dataset.photoItem, input.dataset.photoField, input.files).finally(function () {
+              input.value = "";
+            });
+          });
+        });
+        root.querySelectorAll("[data-delete-photo]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            deletePhoto(button.dataset.deleteItem, button.dataset.deleteField, button.dataset.deletePhoto);
+          });
+        });
+      }
+
+      async function hydratePreviews() {
+        Object.keys(state.previewUrls).forEach(function (key) { URL.revokeObjectURL(state.previewUrls[key]); });
+        state.previewUrls = {};
+        if (!state.report) return;
+        const photoIds = [];
+        Object.keys(state.report.item_data || {}).forEach(function (itemId) {
+          ["before_images", "after_images"].forEach(function (field) {
+            (state.report.item_data[itemId][field] || []).forEach(function (image) {
+              if (image.photo_id) photoIds.push(image.photo_id);
+            });
+          });
+        });
+        for (const id of photoIds) {
+          const row = await dbGet(PHOTO_STORE, id);
+          if (row && row.blob) state.previewUrls[id] = URL.createObjectURL(row.blob);
+        }
+      }
+
+      async function addPhotos(itemId, field, fileList) {
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+        const data = itemData(itemId);
+        if ((data[field] || []).length + files.length > config.maxImagesPerField) {
+          showToast("每个位置最多上传 " + config.maxImagesPerField + " 张照片。");
+          return;
+        }
+        setSaveStatus("处理照片");
+        for (const file of files) {
+          try {
+            const processed = await preprocessImage(file);
+            const photoId = "photo_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+            await dbPut(PHOTO_STORE, { photo_id: photoId, blob: processed.blob, created_at: isoNow() });
+            state.previewUrls[photoId] = URL.createObjectURL(processed.blob);
+            data[field].push({
+              photo_id: photoId,
+              original_name: file.name || processed.file_name,
+              file_name: processed.file_name,
+              size: processed.blob.size,
+              original_size: file.size || processed.blob.size,
+              compressed: processed.compressed,
+              type: "image/jpeg"
+            });
+          } catch (err) {
+            showToast(err.message || "照片处理失败，请重新选择。");
+          }
+        }
+        await saveNow();
+        renderItems();
+        updateStatsAndErrors(false);
+      }
+
+      async function deletePhoto(itemId, field, photoId) {
+        if (!confirm("确定删除这张本机缓存照片吗？")) return;
+        const data = itemData(itemId);
+        data[field] = (data[field] || []).filter(function (image) { return image.photo_id !== photoId; });
+        if (state.previewUrls[photoId]) URL.revokeObjectURL(state.previewUrls[photoId]);
+        delete state.previewUrls[photoId];
+        await dbDelete(PHOTO_STORE, photoId);
+        await saveNow();
+        renderItems();
+        updateStatsAndErrors(false);
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise(function (resolve, reject) {
+          const url = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = function () { URL.revokeObjectURL(url); resolve(image); };
+          image.onerror = function () { URL.revokeObjectURL(url); reject(new Error("图片读取失败，请重新选择。")); };
+          image.src = url;
+        });
+      }
+
+      function canvasToBlob(canvas, quality) {
+        return new Promise(function (resolve) {
+          canvas.toBlob(function (blob) { resolve(blob); }, "image/jpeg", quality);
+        });
+      }
+
+      async function preprocessImage(file) {
+        if (!file || !/^image\//i.test(file.type || "")) throw new Error("请选择图片文件。");
+        const image = await loadImageFromFile(file);
+        const ratio = Math.min(1, MAX_CLIENT_SIDE / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+        const width = Math.max(1, Math.round((image.naturalWidth || image.width) * ratio));
+        const height = Math.max(1, Math.round((image.naturalHeight || image.height) * ratio));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image, 0, 0, width, height);
+        let quality = 0.86;
+        let blob = await canvasToBlob(canvas, quality);
+        while (blob && blob.size > TARGET_IMAGE_SIZE && quality > 0.58) {
+          quality -= 0.08;
+          blob = await canvasToBlob(canvas, quality);
+        }
+        while (blob && blob.size > config.maxImageSize && quality > 0.42) {
+          quality -= 0.06;
+          blob = await canvasToBlob(canvas, quality);
+        }
+        if (!blob) throw new Error("图片压缩失败，请重新选择。");
+        if (blob.size > config.maxImageSize) throw new Error("图片压缩后仍超过 5MB，请先在相册中压缩或减少图片尺寸。");
+        return {
+          blob: blob,
+          file_name: cleanFileBase(file.name) + "_compressed.jpg",
+          compressed: blob.size < (file.size || blob.size)
+        };
+      }
+
+      function computeStats(report) {
+        report = report || state.report;
+        const errors = validateReport(report);
+        let completed = 0;
+        let photoCount = 0;
+        const conclusion = { "正常": 0, "异常": 0, "已处理": 0, "待确认": 0 };
+        config.templateItems.forEach(function (item) {
+          const data = report.item_data[item.id] || {};
+          photoCount += (data.before_images || []).length + (data.after_images || []).length;
+          conclusion[data.conclusion || "正常"] = (conclusion[data.conclusion || "正常"] || 0) + 1;
+          if (isItemDone(item, data)) completed += 1;
+        });
+        return {
+          total_items: config.templateItems.length,
+          completed_items: completed,
+          uncompleted_items: Math.max(config.templateItems.length - completed, 0),
+          missing_image_count: errors.filter(function (err) { return err.field === "before_images" || err.field === "after_images"; }).length,
+          uploaded_image_count: photoCount,
+          compressed_image_count: photoCount,
+          normal_count: conclusion["正常"] || 0,
+          abnormal_count: conclusion["异常"] || 0,
+          handled_count: conclusion["已处理"] || 0,
+          pending_count: conclusion["待确认"] || 0,
+          attention_count: (conclusion["异常"] || 0) + (conclusion["已处理"] || 0) + (conclusion["待确认"] || 0),
+          passed: !errors.length
+        };
+      }
+
+      function isItemDone(item, data) {
+        if (item.record_required && !String(data.measured_value || "").trim()) return false;
+        if (item.before_required && !(data.before_images || []).length) return false;
+        if (item.after_required && !(data.after_images || []).length) return false;
+        return true;
+      }
+
+      function validateReport(report) {
+        const errors = [];
+        config.basicFields.forEach(function (field) {
+          if (field.required && !String((report.base_info || {})[field.key] || "").trim()) {
+            errors.push({ field: field.key, message: field.label + "为必填，请补充。" });
+          }
+        });
+        config.templateItems.forEach(function (item) {
+          const data = (report.item_data || {})[item.id] || {};
+          if (item.record_required && !String(data.measured_value || "").trim()) {
+            errors.push({ item_id: item.id, field: "measured_value", message: (item.display_step || item.step) + "：" + item.action + "，实测情况记录为必填。" });
+          }
+          if (item.before_required && !(data.before_images || []).length) {
+            errors.push({ item_id: item.id, field: "before_images", message: (item.display_step || item.step) + "：" + item.action + "，原始状态照片必传。" });
+          }
+          if (item.after_required && !(data.after_images || []).length) {
+            errors.push({ item_id: item.id, field: "after_images", message: (item.display_step || item.step) + "：" + item.action + "，调试或维护后照片必传。" });
+          }
+          ["before_images", "after_images"].forEach(function (field) {
+            if ((data[field] || []).length > config.maxImagesPerField) {
+              errors.push({ item_id: item.id, field: field, message: (item.display_step || item.step) + "：" + FIELD_LABELS[field] + "最多 " + config.maxImagesPerField + " 张。" });
+            }
+          });
+        });
+        return errors;
+      }
+
+      function updateStatsAndErrors(showErrors) {
+        const stats = computeStats(state.report);
+        const errors = validateReport(state.report);
+        state.lastErrors = showErrors ? errors : [];
+        document.getElementById("statTotal").textContent = stats.total_items;
+        document.getElementById("statDone").textContent = stats.completed_items;
+        document.getElementById("statTodo").textContent = stats.uncompleted_items;
+        document.getElementById("statPhotos").textContent = stats.uploaded_image_count;
+        const percent = stats.total_items ? Math.round(stats.completed_items / stats.total_items * 100) : 0;
+        document.getElementById("statPercent").textContent = percent + "%";
+        document.getElementById("progressBar").style.width = percent + "%";
+        const errorPanel = document.getElementById("errorPanel");
+        if (showErrors && errors.length) {
+          document.getElementById("errorList").innerHTML = errors.slice(0, 80).map(function (err) {
+            return '<div class="error-line">' + escapeHtml(err.message) + '</div>';
+          }).join("");
+          errorPanel.classList.remove("hidden");
+        } else {
+          errorPanel.classList.add("hidden");
+        }
+      }
+
+      async function exportZip(status) {
+        await saveNow();
+        const errors = validateReport(state.report);
+        if (status === "final" && errors.length) {
+          state.lastErrors = errors;
+          updateStatsAndErrors(true);
+          renderItems();
+          showToast("正式ZIP未通过完整性检查，可先导出草稿ZIP防丢。");
+          return;
+        }
+        const issueNo = buildIssueNo(state.report.base_info || {});
+        const packageData = await buildPackageData(status, issueNo, errors);
+        const estimated = packageData.files.reduce(function (sum, file) { return sum + Number(file.size || 0) + 120 + file.name.length * 2; }, 0);
+        if (status === "final" && estimated > config.zipMaxBytes) {
+          showToast("预计ZIP超过500M，请减少照片或压缩后再导出正式ZIP。");
+          return;
+        }
+        setSaveStatus("正在生成ZIP");
+        const zipBlob = await createZip(packageData.files);
+        if (status === "final" && zipBlob.size > config.zipMaxBytes) {
+          showToast("ZIP生成后超过500M，请减少照片后重新导出。");
+          setSaveStatus("已保存 " + timeText());
+          return;
+        }
+        const filename = (status === "draft" ? "草稿_" : "") + safeFileName(issueNo) + ".zip";
+        downloadBlob(zipBlob, filename);
+        state.report.last_exported_at = isoNow();
+        state.report.last_issue_no = issueNo;
+        await saveNow();
+        showToast((status === "final" ? "正式" : "草稿") + "ZIP已导出：" + filename);
+      }
+
+      async function buildPackageData(status, issueNo, errors) {
+        const generatedAt = isoNow();
+        const reportData = await buildReportData(status, issueNo, generatedAt, errors);
+        const manifest = {
+          format_version: config.packageFormatVersion,
+          template_name: config.templateName,
+          tool_version: config.version,
+          app_name: config.appName,
+          export_client: "mobile_offline",
+          report_status: status,
+          issue_no: issueNo,
+          generated_at: generatedAt,
+          zip_max_bytes: config.zipMaxBytes,
+          summary: {
+            hospital: state.report.base_info.hospital || "",
+            model: state.report.base_info.model || "",
+            serial: state.report.base_info.serial || ""
+          },
+          stats: reportData.stats
+        };
+        const reportHtml = buildReportHtml(reportData, manifest);
+        const files = [
+          { name: "manifest.json", data: JSON.stringify(manifest, null, 2), size: utf8Size(JSON.stringify(manifest)) },
+          { name: "report_data.json", data: JSON.stringify(reportData, null, 2), size: utf8Size(JSON.stringify(reportData)) },
+          { name: "report.html", data: reportHtml, size: utf8Size(reportHtml) }
+        ];
+        reportData._imageFiles.forEach(function (file) { files.push(file); });
+        delete reportData._imageFiles;
+        files[1].data = JSON.stringify(reportData, null, 2);
+        files[1].size = utf8Size(files[1].data);
+        return { files: files, reportData: reportData, manifest: manifest };
+      }
+
+      async function buildReportData(status, issueNo, generatedAt, errors) {
+        const imageFiles = [];
+        const groups = [{
+          category: "排查步骤（1-36，第35步含4项）",
+          items: []
+        }];
+        for (const item of config.templateItems) {
+          const data = itemData(item.id);
+          const reportItem = Object.assign({}, item, {
+            measured_value: data.measured_value || "",
+            conclusion: data.conclusion || "正常",
+            conclusion_class: conclusionClass(data.conclusion || "正常"),
+            short_description_warning: isShortDescription(data.measured_value || ""),
+            before_images: [],
+            after_images: []
+          });
+          for (const field of ["before_images", "after_images"]) {
+            const label = FIELD_LABELS[field];
+            let index = 1;
+            for (const image of data[field] || []) {
+              const row = await dbGet(PHOTO_STORE, image.photo_id);
+              if (!row || !row.blob) continue;
+              const ext = "jpg";
+              const path = "images/" + safeFileName((state.report.base_info.hospital || "医院") + "_" + (state.report.base_info.serial || "序列号") + "_" + (item.display_step || item.step || item.id) + "_" + label + "_" + index) + "." + ext;
+              reportItem[field].push({
+                path: path,
+                original_name: image.original_name || path.split("/").pop(),
+                size: row.blob.size,
+                original_size: image.original_size || row.blob.size,
+                compressed: Boolean(image.compressed)
+              });
+              imageFiles.push({ name: path, data: row.blob, size: row.blob.size });
+              index += 1;
+            }
+          }
+          groups[0].items.push(reportItem);
+        }
+        const stats = computeStats(state.report);
+        stats.passed = status === "draft" ? !errors.length : true;
+        const attentionItems = groups[0].items.filter(function (item) {
+          return ["异常", "已处理", "待确认"].includes(item.conclusion);
+        });
+        return {
+          format_version: config.packageFormatVersion,
+          report_status: status,
+          base_info: Object.assign({}, state.report.base_info, { issue_no: issueNo }),
+          issue_no: issueNo,
+          stats: stats,
+          warnings: [],
+          errors: status === "draft" ? errors : [],
+          groups: groups,
+          attention_items: attentionItems,
+          generated_at: generatedAt,
+          _imageFiles: imageFiles
+        };
+      }
+
+      function buildReportHtml(data, manifest) {
+        const issueNo = data.issue_no || "";
+        const baseInfo = data.base_info || {};
+        const stats = data.stats || {};
+        const statusLabel = manifest.report_status === "draft" ? "草稿/未完成" : "正式报告";
+        const style = reportStyle();
+        const bodyGroups = (data.groups || []).map(function (group) {
+          return '<section class="group-section"><div class="section-head"><h2>' + escapeHtml(group.category) + '</h2><span class="subline">' + (group.items || []).length + ' 项</span></div><div class="group-body">' +
+            (group.items || []).map(renderReportItem).join("") + '</div></section>';
+        }).join("");
+        const attention = (data.attention_items || []).length ? (data.attention_items || []).map(function (item) {
+          return '<div class="attention-item"><strong>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(item.action) + ' <span class="conclusion-pill conclusion-' + escapeHtml(item.conclusion_class || conclusionClass(item.conclusion)) + '">' + escapeHtml(item.conclusion) + '</span></strong><div class="subline">' + escapeHtml(item.measured_value || "未填写实测描述") + '</div></div>';
+        }).join("") : '<div class="subline">本报告未标记异常、已处理或待确认项。</div>';
+        const baseCells = '<div class="info-cell"><span>问题编号</span><strong>' + escapeHtml(issueNo) + '</strong></div>' + config.basicFields.map(function (field) {
+          return '<div class="info-cell"><span>' + escapeHtml(field.label) + '</span><strong>' + escapeHtml(baseInfo[field.key] || "未填写") + '</strong></div>';
+        }).join("");
+        const scriptOpen = "<scr" + "ipt>";
+        const scriptClose = "</scr" + "ipt>";
+        return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>跳值排查反馈报告｜' + escapeHtml(issueNo) + '</title><style>' + style + '</style></head><body>' +
+          '<main class="report-shell"><header><h1>免疫产品跳值问题用服工程师排查反馈报告</h1><div class="subline">' + escapeHtml(config.appName) + ' ' + escapeHtml(config.version) + '｜报告生成时间：' + escapeHtml(data.generated_at || "") + '｜' + statusLabel + '</div><div class="issue-badge">问题编号：' + escapeHtml(issueNo) + '</div></header>' +
+          '<section><div class="section-head"><h2>第一部分：基础信息</h2></div><div class="info-grid">' + baseCells + '</div></section>' +
+          '<section><div class="section-head"><h2>第二部分：完整性与异常汇总</h2><strong class="' + (manifest.report_status === "draft" ? "warn" : "ok") + '">完整性校验：' + (manifest.report_status === "draft" ? "草稿" : "通过") + '</strong></div>' +
+          '<div class="stats-grid">' +
+          statCell("总排查项", stats.total_items) + statCell("已完成", stats.completed_items) + statCell("上传图片", stats.uploaded_image_count) + statCell("自动压缩图片", stats.compressed_image_count) +
+          statCell("正常", stats.normal_count, "ok") + statCell("异常", stats.abnormal_count, "danger") + statCell("已处理", stats.handled_count, "warn") + statCell("待确认", stats.pending_count, "pending") +
+          '</div><div class="attention-list">' + attention + '</div></section>' +
+          '<section><div class="section-head"><h2>第三部分：详细排查记录</h2><span class="subline">可按排查结论筛选</span></div><div class="filter-bar"><button type="button" class="active" data-filter="all">全部</button><button type="button" data-filter="异常">只看异常</button><button type="button" data-filter="已处理">只看已处理</button><button type="button" data-filter="待确认">只看待确认</button><button type="button" data-filter="attention">异常/已处理/待确认</button></div></section>' +
+          bodyGroups +
+          '<div id="imageModal" class="image-modal"><div class="modal-bar"><button type="button" id="prevBtn">上一张</button><span id="counter">1 / 1</span><button type="button" id="nextBtn">下一张</button><button type="button" id="zoomOutBtn">缩小</button><button type="button" id="rotateLeftBtn">左旋转</button><button type="button" id="resetBtn">还原</button><button type="button" id="rotateRightBtn">右旋转</button><button type="button" id="zoomInBtn">放大</button><button type="button" id="closeBtn">关闭</button></div><div id="stage" class="stage"><img id="modalImage" alt="报告图片"></div></div>' +
+          '</main>' + scriptOpen + reportScript() + scriptClose + '</body></html>';
+      }
+
+      function renderReportItem(item) {
+        return '<article class="record" data-conclusion="' + escapeHtml(item.conclusion) + '"><div class="record-head"><div class="record-title-row"><div><h3>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(item.action) + '</h3><div class="subline">分类：' + escapeHtml(item.category) + '｜是否执行：是</div></div><span class="conclusion-pill conclusion-' + escapeHtml(item.conclusion_class) + '">' + escapeHtml(item.conclusion) + '</span></div></div><div class="record-body">' +
+          '<div class="detail-box"><span class="detail-label">排查动作</span><p>' + escapeHtml(item.action) + '</p></div>' +
+          '<div class="detail-box"><span class="detail-label">合格指标</span><p>' + escapeHtml(item.standard) + '</p></div>' +
+          '<div class="detail-box"><span class="detail-label">实测情况记录</span><p>' + escapeHtml(item.measured_value || "未填写") + '</p>' + (item.short_description_warning ? '<div class="short-note">提示：该描述较简略，建议 RTS 审核时关注是否需要补充实测值或处理结果。</div>' : '') + '</div>' +
+          '<div class="photo-row">' + renderReportPhotos(item.before_images, "原始状态照片") + renderReportPhotos(item.after_images, "调试或维护后照片") + '</div></div></article>';
+      }
+
+      function renderReportPhotos(images, label) {
+        if (!images || !images.length) return '<div class="photo-box"><span class="detail-label">' + label + '</span><div class="empty">无</div></div>';
+        return '<div class="photo-box"><span class="detail-label">' + label + '</span><div class="photo-grid">' + images.map(function (image) {
+          return '<div class="report-thumb"><img src="' + escapeHtml(image.path) + '" alt="' + escapeHtml(image.original_name || label) + '">' + (image.compressed ? '<span class="compressed-badge">已压缩</span>' : '') + '</div>';
+        }).join("") + '</div></div>';
+      }
+
+      function statCell(label, value, cls) {
+        return '<div class="stat-cell"><span>' + label + '</span><strong class="' + (cls || "") + '">' + escapeHtml(value == null ? 0 : value) + '</strong></div>';
+      }
+
+      function reportStyle() {
+        return ':root{--bg:#f4f6f8;--panel:#fff;--panel-soft:#f8fafb;--line:#dde3e8;--text:#18212b;--muted:#66717f;--accent:#0d6b68;--ok:#087443;--danger:#b42318;--warn:#b7791f;--pending:#344054;--shadow:0 18px 48px rgba(22,34,45,.08)}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#fff 0,var(--bg) 240px),var(--bg);color:var(--text);font-family:"Microsoft YaHei","Segoe UI",Arial,sans-serif;font-size:14px;letter-spacing:0}.report-shell{width:min(1180px,calc(100vw - 32px));margin:24px auto 52px}header,section{border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden;box-shadow:var(--shadow)}header{padding:24px}h1{margin:0 0 8px;font-size:26px;line-height:1.25}h2{margin:0;font-size:18px}h3{margin:0;font-size:16px;line-height:1.5}section{margin-top:16px}.subline{color:var(--muted);line-height:1.6}.issue-badge{display:inline-flex;margin-top:8px;padding:7px 10px;border-radius:6px;background:#e6f4f1;color:var(--accent);font-weight:700}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line);background:var(--panel-soft)}.info-grid,.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line)}.info-cell,.stat-cell{min-height:76px;padding:13px;background:var(--panel)}.info-cell span,.stat-cell span,.detail-label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.info-cell strong,.stat-cell strong{display:block;line-height:1.6;white-space:pre-wrap}.stat-cell strong{font-size:24px}.ok{color:var(--ok)}.danger{color:var(--danger)}.warn{color:var(--warn)}.pending{color:var(--pending)}.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}button{min-height:34px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text);padding:0 12px;cursor:pointer;font:inherit}button.active{border-color:var(--accent);background:var(--accent);color:#fff}.attention-list{padding:14px 16px;display:grid;gap:8px}.attention-item{border:1px solid var(--line);border-radius:8px;padding:11px;background:var(--panel-soft)}.attention-item strong{display:block;margin-bottom:4px}.conclusion-pill{display:inline-flex;align-items:center;min-height:24px;border-radius:999px;padding:0 8px;font-size:12px;font-weight:700;background:#edf2ee;color:var(--muted)}.conclusion-normal{background:#ecfdf3;color:var(--ok)}.conclusion-abnormal{background:#fff1f0;color:var(--danger)}.conclusion-handled{background:#fff7ed;color:var(--warn)}.conclusion-pending{background:#eef2f7;color:var(--pending)}.group-body{padding:14px;display:grid;grid-template-columns:1fr;gap:12px}.record{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}.record[data-conclusion="异常"]{border-color:#f2aaa1}.record[data-conclusion="已处理"]{border-color:#f5d08a}.record[data-conclusion="待确认"]{border-color:#a8b4c7}.record.hidden-by-filter,.group-section.hidden-by-filter{display:none!important}.record-head{padding:13px 14px;border-bottom:1px solid var(--line);background:#fff}.record-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.record-body{padding:14px;display:grid;gap:10px;background:#fcfdfd}.detail-box{border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff}.detail-box p{margin:0;line-height:1.6;white-space:pre-wrap}.short-note{color:var(--warn);font-size:12px;margin-top:6px}.photo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.photo-box{border:1px solid var(--line);border-radius:6px;padding:10px;background:#fff;min-height:140px}.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px}.report-thumb{position:relative;height:96px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}.report-thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}.compressed-badge{position:absolute;left:4px;bottom:4px;border-radius:4px;padding:2px 6px;background:rgba(15,118,110,.92);color:#fff;font-size:12px}.empty{color:var(--muted)}.image-modal{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;background:rgba(12,18,16,.88)}.image-modal.active{display:flex}.modal-bar{display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;padding:10px;background:rgba(255,255,255,.96);flex-wrap:wrap}.stage{position:relative;flex:1;overflow:hidden;cursor:grab}.stage:active{cursor:grabbing}#modalImage{position:absolute;top:50%;left:50%;transform-origin:center center;user-select:none}@media print{body{background:#fff}.report-shell{width:100%;margin:0}section,header{box-shadow:none;break-inside:avoid}.image-modal,.filter-bar{display:none!important}}@media(max-width:900px){.info-grid,.stats-grid,.group-body,.photo-row{grid-template-columns:1fr}}';
+      }
+
+      function reportScript() {
+        return '(function(){var filterButtons=Array.prototype.slice.call(document.querySelectorAll("[data-filter]"));filterButtons.forEach(function(button){button.addEventListener("click",function(){filterButtons.forEach(function(btn){btn.classList.remove("active")});button.classList.add("active");applyFilter(button.getAttribute("data-filter"))})});function applyFilter(filter){Array.prototype.slice.call(document.querySelectorAll(".record")).forEach(function(record){var conclusion=record.getAttribute("data-conclusion");var show=filter==="all"||conclusion===filter||(filter==="attention"&&["异常","已处理","待确认"].indexOf(conclusion)!==-1);record.classList.toggle("hidden-by-filter",!show)});Array.prototype.slice.call(document.querySelectorAll(".group-section")).forEach(function(section){var visible=section.querySelectorAll(".record:not(.hidden-by-filter)").length>0;section.classList.toggle("hidden-by-filter",!visible)})}var images=Array.prototype.slice.call(document.querySelectorAll(".report-thumb img"));var modal=document.getElementById("imageModal");var modalImage=document.getElementById("modalImage");var counter=document.getElementById("counter");var index=0,zoom=1,rotation=0,offsetX=0,offsetY=0,dragging=false,startX=0,startY=0;images.forEach(function(img,imgIndex){img.addEventListener("click",function(){index=imgIndex;resetView();modal.classList.add("active");render()})});document.getElementById("closeBtn").onclick=function(){modal.classList.remove("active")};document.getElementById("prevBtn").onclick=function(){move(-1)};document.getElementById("nextBtn").onclick=function(){move(1)};document.getElementById("zoomOutBtn").onclick=function(){setZoom(zoom/1.2)};document.getElementById("zoomInBtn").onclick=function(){setZoom(zoom*1.2)};document.getElementById("rotateLeftBtn").onclick=function(){rotation=(rotation-90)%360;render()};document.getElementById("rotateRightBtn").onclick=function(){rotation=(rotation+90)%360;render()};document.getElementById("resetBtn").onclick=function(){resetView();render()};document.getElementById("stage").addEventListener("wheel",function(event){event.preventDefault();setZoom(zoom*(event.deltaY<0?1.12:.88))});document.getElementById("stage").addEventListener("mousedown",function(event){dragging=true;startX=event.clientX-offsetX;startY=event.clientY-offsetY});document.addEventListener("mousemove",function(event){if(!dragging)return;offsetX=event.clientX-startX;offsetY=event.clientY-startY;render()});document.addEventListener("mouseup",function(){dragging=false});document.addEventListener("keydown",function(event){if(!modal.classList.contains("active"))return;if(event.key==="Escape")modal.classList.remove("active");if(event.key==="ArrowLeft")move(-1);if(event.key==="ArrowRight")move(1);if(event.key==="r"||event.key==="R"){rotation=(rotation+90)%360;render()}});function move(delta){if(!images.length)return;index=(index+delta+images.length)%images.length;resetView();render()}function resetView(){zoom=1;rotation=0;offsetX=0;offsetY=0}function setZoom(value){zoom=Math.max(.2,Math.min(value,8));render()}function render(){if(!images[index])return;modalImage.src=images[index].src;modalImage.alt=images[index].alt;modalImage.style.transform="translate(-50%, -50%) translate("+offsetX+"px, "+offsetY+"px) rotate("+rotation+"deg) scale("+zoom+")";counter.textContent=(index+1)+" / "+images.length}})();';
+      }
+
+      async function createZip(files) {
+        const encoder = new TextEncoder();
+        const localParts = [];
+        const centralParts = [];
+        let offset = 0;
+        for (const file of files) {
+          const nameBytes = encoder.encode(file.name.replace(/\\/g, "/"));
+          const dataBytes = await dataToBytes(file.data);
+          const crc = crc32(dataBytes);
+          const mod = dosDateTime(new Date());
+          const localHeader = new Uint8Array(30);
+          write32(localHeader, 0, 0x04034b50);
+          write16(localHeader, 4, 20);
+          write16(localHeader, 6, 0x0800);
+          write16(localHeader, 8, 0);
+          write16(localHeader, 10, mod.time);
+          write16(localHeader, 12, mod.date);
+          write32(localHeader, 14, crc);
+          write32(localHeader, 18, dataBytes.length);
+          write32(localHeader, 22, dataBytes.length);
+          write16(localHeader, 26, nameBytes.length);
+          write16(localHeader, 28, 0);
+          localParts.push(localHeader, nameBytes, dataBytes);
+
+          const central = new Uint8Array(46);
+          write32(central, 0, 0x02014b50);
+          write16(central, 4, 20);
+          write16(central, 6, 20);
+          write16(central, 8, 0x0800);
+          write16(central, 10, 0);
+          write16(central, 12, mod.time);
+          write16(central, 14, mod.date);
+          write32(central, 16, crc);
+          write32(central, 20, dataBytes.length);
+          write32(central, 24, dataBytes.length);
+          write16(central, 28, nameBytes.length);
+          write16(central, 30, 0);
+          write16(central, 32, 0);
+          write16(central, 34, 0);
+          write16(central, 36, 0);
+          write32(central, 38, 0);
+          write32(central, 42, offset);
+          centralParts.push(central, nameBytes);
+          offset += localHeader.length + nameBytes.length + dataBytes.length;
+        }
+        const centralSize = centralParts.reduce(function (sum, part) { return sum + part.length; }, 0);
+        const centralOffset = offset;
+        const end = new Uint8Array(22);
+        write32(end, 0, 0x06054b50);
+        write16(end, 8, files.length);
+        write16(end, 10, files.length);
+        write32(end, 12, centralSize);
+        write32(end, 16, centralOffset);
+        write16(end, 20, 0);
+        return new Blob(localParts.concat(centralParts, [end]), { type: "application/zip" });
+      }
+
+      async function dataToBytes(data) {
+        if (data instanceof Uint8Array) return data;
+        if (data instanceof Blob) return new Uint8Array(await data.arrayBuffer());
+        return new TextEncoder().encode(String(data == null ? "" : data));
+      }
+
+      function write16(bytes, offset, value) {
+        bytes[offset] = value & 255;
+        bytes[offset + 1] = (value >>> 8) & 255;
+      }
+
+      function write32(bytes, offset, value) {
+        bytes[offset] = value & 255;
+        bytes[offset + 1] = (value >>> 8) & 255;
+        bytes[offset + 2] = (value >>> 16) & 255;
+        bytes[offset + 3] = (value >>> 24) & 255;
+      }
+
+      function dosDateTime(date) {
+        return {
+          time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+          date: ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()
+        };
+      }
+
+      const crcTable = (function () {
+        const table = new Uint32Array(256);
+        for (let n = 0; n < 256; n += 1) {
+          let c = n;
+          for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+          table[n] = c >>> 0;
+        }
+        return table;
+      })();
+
+      function crc32(bytes) {
+        let crc = 0xffffffff;
+        for (let i = 0; i < bytes.length; i += 1) crc = crcTable[(crc ^ bytes[i]) & 255] ^ (crc >>> 8);
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      function buildIssueNo(base) {
+        return [base.hospital || "医院", base.model || "机型", base.serial || "序列号"].join("*") + "_" + compactTimestamp();
+      }
+
+      function compactTimestamp() {
+        const now = new Date();
+        const pad = function (value) { return String(value).padStart(2, "0"); };
+        return now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+      }
+
+      function cleanFileBase(name) {
+        return String(name || "photo").replace(/\.[^.]+$/, "").replace(/[^\w\u4e00-\u9fff-]+/g, "_").slice(0, 48) || "photo";
+      }
+
+      function safeFileName(value) {
+        return String(value || "未命名").replace(/[<>:"/\\|?*\r\n\t]+/g, "_").replace(/\s+/g, "_").replace(/^\.+|\.+$/g, "").slice(0, 120) || "未命名";
+      }
+
+      function conclusionClass(value) {
+        if (value === "异常") return "abnormal";
+        if (value === "已处理") return "handled";
+        if (value === "待确认") return "pending";
+        return "normal";
+      }
+
+      function isShortDescription(value) {
+        const compact = String(value || "").replace(/\s+/g, "");
+        if (!compact) return false;
+        return ["正常", "无", "无异常", "OK", "ok", "已完成", "符合", "没问题", "良好", "通过"].includes(compact) || compact.length < 8;
+      }
+
+      function utf8Size(value) {
+        return new TextEncoder().encode(String(value == null ? "" : value)).length;
+      }
+
+      function isoNow() {
+        const now = new Date();
+        const pad = function (value) { return String(value).padStart(2, "0"); };
+        return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+      }
+
+      function timeText() {
+        const now = new Date();
+        return String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0") + ":" + String(now.getSeconds()).padStart(2, "0");
+      }
+
+      function setSaveStatus(text) {
+        document.getElementById("saveStatus").textContent = text;
+      }
+
+      function showToast(text) {
+        const node = document.getElementById("toast");
+        node.textContent = text;
+        node.classList.remove("hidden");
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(function () { node.classList.add("hidden"); }, 2800);
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      }
+    })();
+  </script>
+</body>
+</html>

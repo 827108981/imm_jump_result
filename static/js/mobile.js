@@ -726,15 +726,6 @@
     return String(name || "photo").replace(/\.[^.]+$/, "").replace(/[^\w\u4e00-\u9fff-]+/g, "_").slice(0, 48) || "photo";
   }
 
-  function buildWatermarkLines(item, field) {
-    const base = state.baseInfo || {};
-    return [
-      "医院：" + (base.hospital || "未填写") + "  设备：" + (base.model || "未填写") + " / " + (base.serial || "未填写"),
-      "步骤：" + (item.display_step || item.step || "") + "  " + (item.action || ""),
-      "照片：" + FIELD_LABELS[field] + "  时间：" + localTimeText()
-    ];
-  }
-
   function loadImageFromFile(file) {
     return new Promise(function (resolve, reject) {
       const url = URL.createObjectURL(file);
@@ -759,24 +750,6 @@
     });
   }
 
-  function drawWatermark(ctx, width, height, lines) {
-    const scale = Math.max(1, width / 1200);
-    const padding = Math.round(14 * scale);
-    const lineHeight = Math.round(24 * scale);
-    const fontSize = Math.round(16 * scale);
-    const boxHeight = padding * 2 + lineHeight * lines.length;
-    ctx.save();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.56)";
-    ctx.fillRect(0, height - boxHeight, width, boxHeight);
-    ctx.font = "600 " + fontSize + "px Microsoft YaHei, Arial, sans-serif";
-    ctx.fillStyle = "#ffffff";
-    ctx.textBaseline = "top";
-    lines.forEach(function (line, index) {
-      ctx.fillText(line, padding, height - boxHeight + padding + index * lineHeight, width - padding * 2);
-    });
-    ctx.restore();
-  }
-
   async function preprocessImage(file, item, field) {
     const img = await loadImageFromFile(file);
     const ratio = Math.min(1, MAX_CLIENT_SIDE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
@@ -787,7 +760,6 @@
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, width, height);
-    drawWatermark(ctx, width, height, buildWatermarkLines(item, field));
 
     let quality = 0.84;
     let blob = await canvasToBlob(canvas, quality);
@@ -798,7 +770,7 @@
     if (!blob) {
       throw new Error("图片处理失败，请重新选择。");
     }
-    const processedName = cleanFileBase(file.name) + "_watermark.jpg";
+    const processedName = cleanFileBase(file.name) + "_compressed.jpg";
     return {
       blob: blob,
       file_name: processedName,
@@ -806,8 +778,8 @@
       original_size: file.size || blob.size,
       processed_size: blob.size,
       compressed: blob.size < (file.size || blob.size),
-      watermarked: true,
-      watermark_text: buildWatermarkLines(item, field).join(" | ")
+      watermarked: false,
+      watermark_text: ""
     };
   }
 

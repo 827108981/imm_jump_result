@@ -29,6 +29,7 @@
       images: [],
       index: 0,
       zoom: 1,
+      rotation: 0,
       offsetX: 0,
       offsetY: 0,
       dragging: false,
@@ -1132,8 +1133,15 @@
     document.getElementById("modalZoomIn").addEventListener("click", function () {
       setZoom(state.modal.zoom * 1.2);
     });
+    document.getElementById("modalRotateLeft").addEventListener("click", function () {
+      rotateModalImage(-90);
+    });
+    document.getElementById("modalRotateRight").addEventListener("click", function () {
+      rotateModalImage(90);
+    });
     document.getElementById("modalZoomReset").addEventListener("click", function () {
       state.modal.zoom = 1;
+      state.modal.rotation = 0;
       state.modal.offsetX = 0;
       state.modal.offsetY = 0;
       renderModalImage();
@@ -1163,6 +1171,7 @@
       if (event.key === "Escape") closeImageModal();
       if (event.key === "ArrowLeft") moveModal(-1);
       if (event.key === "ArrowRight") moveModal(1);
+      if (event.key === "r" || event.key === "R") rotateModalImage(90);
     });
   }
 
@@ -1171,6 +1180,7 @@
     state.modal.images = images;
     state.modal.index = index || 0;
     state.modal.zoom = 1;
+    state.modal.rotation = 0;
     state.modal.offsetX = 0;
     state.modal.offsetY = 0;
     document.getElementById("imageModal").classList.remove("hidden");
@@ -1186,6 +1196,7 @@
     if (!total) return;
     state.modal.index = (state.modal.index + delta + total) % total;
     state.modal.zoom = 1;
+    state.modal.rotation = 0;
     state.modal.offsetX = 0;
     state.modal.offsetY = 0;
     renderModalImage();
@@ -1196,13 +1207,18 @@
     renderModalImage();
   }
 
+  function rotateModalImage(delta) {
+    state.modal.rotation = (state.modal.rotation + delta) % 360;
+    renderModalImage();
+  }
+
   function renderModalImage() {
     const image = state.modal.images[state.modal.index];
     if (!image) return;
     const node = document.getElementById("modalImage");
     node.src = image.url;
     node.alt = image.original_name || "预览图片";
-    node.style.transform = "translate(-50%, -50%) translate(" + state.modal.offsetX + "px, " + state.modal.offsetY + "px) scale(" + state.modal.zoom + ")";
+    node.style.transform = "translate(-50%, -50%) translate(" + state.modal.offsetX + "px, " + state.modal.offsetY + "px) rotate(" + state.modal.rotation + "deg) scale(" + state.modal.zoom + ")";
     document.getElementById("modalCounter").textContent = (state.modal.index + 1) + " / " + state.modal.images.length;
   }
 })();

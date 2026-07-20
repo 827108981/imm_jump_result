@@ -1,0 +1,39 @@
+{
+  "task_id": "m_20260708162829_775d9de5",
+  "session_id": "fbc0ea2597494ced85803c1898ccddb8",
+  "token_hash": "34a937618146e2202e01736b1c0a2294f3df4e8c4ced3c5dff35aaa897060a2c",
+  "status": "active",
+  "created_at": "2026-07-08 16:28:29",
+  "expires_at": "2026-07-09 00:28:29",
+  "expires_at_ts": 1783528109,
+  "last_seen_at": "2026-07-08 16:28:29",
+  "updated_at": "2026-07-08 16:28:29",
+  "updated_seq": 2,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708162829_775d9de5&token=3820ce0ad80749bc826b93ebdac587c10609d821be7f4c6fa8552aa36b1978b1",
+  "base_info": {
+    "hospital": "smoke",
+    "model": "A1",
+    "serial": "S1"
+  },
+  "items": [
+    {
+      "id": "item_001",
+      "measured_value": "ok record",
+      "conclusion": "正常",
+      "before_images": [],
+      "after_images": [
+        {
+          "session_id": "fbc0ea2597494ced85803c1898ccddb8",
+          "stored_name": "1783499309509_61baaca2_smoke.jpg",
+          "original_name": "smoke.jpg",
+          "size": 1517818,
+          "original_size": 1517818,
+          "compressed": false,
+          "url": "/uploads/fbc0ea2597494ced85803c1898ccddb8/1783499309509_61baaca2_smoke.jpg",
+          "source": "mobile"
+        }
+      ],
+      "mobile_updated_at": "2026-07-08 16:28:29"
+    }
+  ]
+}

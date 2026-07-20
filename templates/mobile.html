@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>手机采集｜{{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}?v={{ version }}-mobile-v2-status">
+</head>
+<body>
+  <header class="mobile-header">
+    <div>
+      <h1>手机采集</h1>
+      <p>{{ app_name }} {{ version }}</p>
+    </div>
+    <span id="connectionStatus" class="status-pill">连接中</span>
+  </header>
+
+  <main class="mobile-shell">
+    <section id="baseSummary" class="summary-card"></section>
+
+    <section class="capability-card">
+      <span>离线缓存</span>
+      <span>断点续传</span>
+      <span>照片压缩</span>
+      <span>步骤水印</span>
+      <span>语音转文字</span>
+    </section>
+
+    <section class="progress-card">
+      <div>
+        <span>完成进度</span>
+        <strong id="progressText">0 / 0</strong>
+      </div>
+      <div class="progress-track"><i id="progressBar"></i></div>
+    </section>
+
+    <section id="pendingCard" class="pending-card hidden">
+      <div>
+        <strong>待补传照片 <span id="pendingCount">0</span> 张</strong>
+        <p>照片已在本机缓存，网络恢复后会自动续传；页面关闭前请确认补传完成。</p>
+      </div>
+      <button id="retryPendingButton" type="button">立即补传</button>
+    </section>
+
+    <section class="filter-bar">
+      <button type="button" class="active" data-filter="all">全部</button>
+      <button type="button" data-filter="todo">未完成</button>
+      <button type="button" data-filter="photo">缺照片</button>
+      <button type="button" data-filter="record">缺/短记录</button>
+    </section>
+
+    <section id="itemList" class="mobile-list"></section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="{{ url_for('static', filename='js/mobile.js') }}?v={{ version }}-mobile-v2-status"></script>
+</body>
+</html>

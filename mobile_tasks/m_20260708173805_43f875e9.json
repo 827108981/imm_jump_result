@@ -1,0 +1,20 @@
+{
+  "task_id": "m_20260708173805_43f875e9",
+  "session_id": "18dd8d98008d404583a6348b2ccdb0d4",
+  "token_hash": "15e8d99a017222c5ab97b7d7bc981fe65e2f01ae8d85119f625ac397ada95632",
+  "status": "active",
+  "mode": "full",
+  "created_at": "2026-07-08 17:38:05",
+  "expires_at": "2026-07-09 01:38:05",
+  "expires_at_ts": 1783532285,
+  "last_seen_at": "",
+  "updated_at": "2026-07-08 17:38:05",
+  "updated_seq": 0,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708173805_43f875e9&token=14a19a9462f7487d93db4929c3b4533496d44070b0c443e5be3c352ae382457d",
+  "base_info": {
+    "hospital": "????"
+  },
+  "supplement_note": "",
+  "supplement_item_ids": [],
+  "items": []
+}

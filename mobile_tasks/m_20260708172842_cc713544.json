@@ -1,0 +1,40 @@
+{
+  "task_id": "m_20260708172842_cc713544",
+  "session_id": "52b9e334564b436aa6f0e2648be15121",
+  "token_hash": "54468ada53ae1ec0d864931faa0f5961330a5cd58645b6fcd4841b7f86a6446b",
+  "status": "active",
+  "mode": "full",
+  "created_at": "2026-07-08 17:28:42",
+  "expires_at": "2026-07-09 01:28:42",
+  "expires_at_ts": 1783531722,
+  "last_seen_at": "2026-07-08 17:28:42",
+  "updated_at": "2026-07-08 17:28:42",
+  "updated_seq": 2,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708172842_cc713544&token=11fbff658d8b49b0a19d2bf94e835b0b0bf01d9337c542d3aea362d39ea8293c",
+  "base_info": {
+    "hospital": "????"
+  },
+  "supplement_note": "",
+  "supplement_item_ids": [],
+  "items": [
+    {
+      "id": "item_001",
+      "measured_value": "????",
+      "conclusion": "正常",
+      "before_images": [
+        {
+          "session_id": "52b9e334564b436aa6f0e2648be15121",
+          "stored_name": "1783502922837_55203a4b_old.jpg",
+          "original_name": "old.jpg",
+          "size": 647493,
+          "original_size": 647493,
+          "compressed": false,
+          "url": "/uploads/52b9e334564b436aa6f0e2648be15121/1783502922837_55203a4b_old.jpg",
+          "source": "mobile"
+        }
+      ],
+      "after_images": [],
+      "mobile_updated_at": "2026-07-08 17:28:42"
+    }
+  ]
+}

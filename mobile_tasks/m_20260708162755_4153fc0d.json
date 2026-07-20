@@ -1,0 +1,28 @@
+{
+  "task_id": "m_20260708162755_4153fc0d",
+  "session_id": "8523743a009f4a1ba6fa6974f0e444d7",
+  "token_hash": "95b1160af35720ae1e832ef0870f49a66f12958d300472b0c4d64d5ff94e09ff",
+  "status": "active",
+  "created_at": "2026-07-08 16:27:55",
+  "expires_at": "2026-07-09 00:27:55",
+  "expires_at_ts": 1783528075,
+  "last_seen_at": "2026-07-08 16:27:56",
+  "updated_at": "2026-07-08 16:27:56",
+  "updated_seq": 1,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708162755_4153fc0d&token=84c8e435d9fb47f4b0ca9f6a374fe77e26e56c01ddaa4658888f88808533347c",
+  "base_info": {
+    "hospital": "smoke",
+    "model": "A1",
+    "serial": "S1"
+  },
+  "items": [
+    {
+      "id": "item_001",
+      "measured_value": "ok record",
+      "conclusion": "正常",
+      "before_images": [],
+      "after_images": [],
+      "mobile_updated_at": "2026-07-08 16:27:56"
+    }
+  ]
+}

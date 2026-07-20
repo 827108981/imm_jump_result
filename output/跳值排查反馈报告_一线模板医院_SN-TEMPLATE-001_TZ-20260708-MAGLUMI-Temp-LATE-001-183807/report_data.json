@@ -1,0 +1,1362 @@
+{
+  "base_info": {
+    "check_date": "2026-07-08",
+    "contact": "13800000000",
+    "engineer": "一线工程师模板",
+    "hospital": "一线模板医院",
+    "jump_project": "示例项目",
+    "model": "MAGLUMI-Template",
+    "problem": "模板示例：用于演示一线报告 ZIP 与 RTS 返回 ZIP 的闭环。",
+    "serial": "SN-TEMPLATE-001",
+    "software": "V0.0-template",
+    "issue_no": "TZ-20260708-MAGLUMI-Temp-LATE-001-183807"
+  },
+  "issue_no": "TZ-20260708-MAGLUMI-Temp-LATE-001-183807",
+  "stats": {
+    "total_items": 39,
+    "completed_items": 39,
+    "uncompleted_items": 0,
+    "required_text_total": 22,
+    "required_text_done": 22,
+    "missing_image_count": 0,
+    "uploaded_image_count": 44,
+    "compressed_image_count": 0,
+    "normal_count": 38,
+    "abnormal_count": 0,
+    "handled_count": 0,
+    "pending_count": 1,
+    "attention_count": 1,
+    "passed": true
+  },
+  "warnings": [],
+  "groups": [
+    {
+      "category": "排查步骤（1-36，第35步含4项）",
+      "items": [
+        {
+          "id": "item_001",
+          "index": 1,
+          "sort_order": 100,
+          "step": "第1步",
+          "display_step": "第1步",
+          "priority": "高",
+          "category": "设备报警排查",
+          "action": "1. 筛选和查看故障日期前后的报警和维修记录，优先修复设备当下存在的必发或偶发硬件类故障。\n2. 检查系统设置，如自动维护设置、底物气泡检测设置",
+          "standard": "1. 修复发现的故障报警，如xx检测到气泡、磁分离吸液针堵针、效应检测失败等\n2. 日常清洁、底物气泡检测光耦未被屏蔽；效应检测时间间隔不大于6h。",
+          "execution": "是",
+          "record_template": "提供设备半年内维修和维护记录，及其备件更换情况。\n按时间顺序梳理，简要总结维修排查过程；",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": true,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：报警与维护记录已检查，需 RTS 确认是否补充原始状态照片。",
+          "conclusion": "待确认",
+          "conclusion_class": "pending",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第1步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_002",
+          "index": 2,
+          "sort_order": 200,
+          "step": "第2步",
+          "display_step": "第2步",
+          "priority": "高",
+          "category": "数据备份",
+          "action": "1. 导出位置参数\n2. 查看软件版本",
+          "standard": "1. 导出调试前与调试后的位置参数；\n2. 软件应为最新版本（若客户端使用特殊版本，可暂不升级软件）",
+          "execution": "是",
+          "record_template": "操作软件版本号：",
+          "before_template": "导出调试前位置参数",
+          "after_template": "导出调试后位置参数；\n拍图记录操作软件版本号",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第2步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第2步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_003",
+          "index": 3,
+          "sort_order": 300,
+          "step": "第3步",
+          "display_step": "第3步",
+          "priority": "高",
+          "category": "设备周边环境检查",
+          "action": "排查仪器电源接口处零地电压、排水管路、仪器供电插排、 周边电磁干扰设备",
+          "standard": "客户端采用UPS供电\n仪器和电脑电源接口处零地电压小于5v；\n仪器和电脑供电插头、插排无松脱和接触不良；\n仪器远离空调口、冰箱、离心机；科室附近楼层无放射设备；\n设备外部废液排放管路无压折，无排水不畅情况； 设备内部真空容器无积液现象。",
+          "execution": "是",
+          "record_template": "仪器接头端测零地电压：    V;\n供电频率：   HZ",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": true,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第3步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_004",
+          "index": 4,
+          "sort_order": 400,
+          "step": "第4步",
+          "display_step": "第4步",
+          "priority": "高",
+          "category": "操作规范性",
+          "action": "日常操作规范性",
+          "standard": "反应杯是否用成其他厂家；底物撕膜、拧盖",
+          "execution": "是",
+          "record_template": "有异常则拍照",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        },
+        {
+          "id": "item_005",
+          "index": 5,
+          "sort_order": 500,
+          "step": "第5步",
+          "display_step": "第5步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "整机运动部件灰尘检查",
+          "standard": "以下位置应无明显积尘：\n1、第一抓杯手面壳\n2、样本针摇臂面壳\n3、试剂针摇臂面壳\n4、第二抓杯手面壳\n5、反应杯盒存放区（CL-6000i料斗)\n6、分离液桶盖",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第5步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_006",
+          "index": 6,
+          "sort_order": 600,
+          "step": "第6步",
+          "display_step": "第6步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "样本针和试剂针内外壁检查",
+          "standard": "清洁针外壁，外壁光亮、无肉眼可见凝胶或其他污染物。",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第6步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_007",
+          "index": 7,
+          "sort_order": 700,
+          "step": "第7步",
+          "display_step": "第7步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "视检和清洁池清洁",
+          "standard": "1.使用棉签蘸取10倍稀释后的CD80（CL-6000i蘸稀释后探头清洗液），然后使用去离子水再次擦拭，确保清洗池孔无肉眼可见结晶或凝胶等异物；\n2. 清洗池体无裂纹、无漏液。\n3. 清洗池四个小孔出水均顺畅，清洗底部废液排放管路内无液体累积。",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第7步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_008",
+          "index": 8,
+          "sort_order": 800,
+          "step": "第8步",
+          "display_step": "第8步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "混匀孔、加样孔清洁",
+          "standard": "用酒精棉擦拭，孔内无异物",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第8步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_009",
+          "index": 9,
+          "sort_order": 900,
+          "step": "第9步",
+          "display_step": "第9步",
+          "priority": "高",
+          "category": "漏液检查",
+          "action": "样本和试剂注射器",
+          "standard": "无漏液，无气泡；S/R注射器5个固定螺钉无松脱且使用时间不宜超过半年。",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第9步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_010",
+          "index": 10,
+          "sort_order": 1000,
+          "step": "第10步",
+          "display_step": "第10步",
+          "priority": "高",
+          "category": "漏液检查",
+          "action": "磁分离清洗注射器、S/R针内外壁清洗注射器",
+          "standard": "接头及柱塞应无液体，自制注射器存在白色粉末可接受",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第10步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_011",
+          "index": 11,
+          "sort_order": 1100,
+          "step": "第11步",
+          "display_step": "第11步",
+          "priority": "高",
+          "category": "漏液检查",
+          "action": "底物相关管路检查",
+          "standard": "底物穿刺针-底物阀-底物注射器链路上的接头处无漏液；若发现接头处存在漏液或结晶，则紧固接头后清理干净",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第11步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_012",
+          "index": 12,
+          "sort_order": 1200,
+          "step": "第12步",
+          "display_step": "第12步",
+          "priority": "高",
+          "category": "漏液检查",
+          "action": "S/R针和磁分离注液管路检查",
+          "standard": "管路接头处无漏液或结晶",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第12步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_013",
+          "index": 13,
+          "sort_order": 1300,
+          "step": "第13步",
+          "display_step": "第13步",
+          "priority": "高",
+          "category": "漏液检查",
+          "action": "蠕动泵管检查",
+          "standard": "无扭转或破裂、泵管类型未用错；\n泵管卡头在槽内，泵管压板螺母无松动\n使用时间不超过半年（注意更换方式：装一根，蠕动泵转10圈，保证泵管无扭转）",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第13步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_014",
+          "index": 14,
+          "sort_order": 1400,
+          "step": "第14步",
+          "display_step": "第14步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "磁分离盘溢流检查",
+          "standard": "磁分离盘底溢流管若有结晶则表明曾有溢流，需着重检测盘孔内部，确保无结晶、无异物、无溢流痕迹，且各托杯座转动顺畅。",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第14步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_015",
+          "index": 15,
+          "sort_order": 1500,
+          "step": "第15步",
+          "display_step": "第15步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "排查磁分离吸液针",
+          "standard": "磁分离吸液针按期更换\n旧针清洗后备用；",
+          "execution": "是",
+          "record_template": "最近一次更换日期是：\n拍照4个旧吸液针针尖",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": true,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第15步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_016",
+          "index": 16,
+          "sort_order": 1600,
+          "step": "第16步",
+          "display_step": "第16步",
+          "priority": "高",
+          "category": "流量测试",
+          "action": "磁分离吸液流量",
+          "standard": "磁分离吸液流量测140±5 ul/s;",
+          "execution": "是",
+          "record_template": "第一阶液流量：    ;第二阶液流量：   \n第三阶液流量：    ;第四阶液流量：",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        },
+        {
+          "id": "item_017",
+          "index": 17,
+          "sort_order": 1700,
+          "step": "第17步",
+          "display_step": "第17步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "磁分离注液针清洁",
+          "standard": "润湿纱布清洁外壁，确保无结晶",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第17步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_018",
+          "index": 18,
+          "sort_order": 1800,
+          "step": "第18步",
+          "display_step": "第18步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "底物注入针",
+          "standard": "底物注入针无结晶，特氟龙管伸出长度为1.5mm；",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第18步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_019",
+          "index": 19,
+          "sort_order": 1900,
+          "step": "第19步",
+          "display_step": "第19步",
+          "priority": "高",
+          "category": "清洁维护",
+          "action": "反应盘孔异物检查",
+          "standard": "盘孔内干净，无异物和残液。\n测光孔无异物",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第19步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_020",
+          "index": 20,
+          "sort_order": 2000,
+          "step": "第20步",
+          "display_step": "第20步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "新版轨道工装调试样本针在常规吸样位置，客户端使用新版样本架",
+          "standard": "假针下行时可自然进入夹具定位孔内",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第20步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第20步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_021",
+          "index": 21,
+          "sort_order": 2100,
+          "step": "第21步",
+          "display_step": "第21步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "新版轨道工装调试样本针在急诊通道吸样位置，客户端使用新版样本架",
+          "standard": "假针下行时可自然进入夹具定位孔内",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第21步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第21步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_022",
+          "index": 22,
+          "sort_order": 2200,
+          "step": "第22步",
+          "display_step": "第22步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "样本针在加样位置水平和垂直高度调试",
+          "standard": "水平位置：假针下行时可自然进入夹具定位孔内\n垂直位置：假针抬起高度0.15mm",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第22步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第22步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_023",
+          "index": 23,
+          "sort_order": 2300,
+          "step": "第23步",
+          "display_step": "第23步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "样本针在稀释位置水平和垂直高度调试",
+          "standard": "水平位置：假针下行时可自然进入夹具定位孔内\n垂直位置：假针抬起高度0.15mm",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第23步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第23步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_024",
+          "index": 24,
+          "sort_order": 2400,
+          "step": "第24步",
+          "display_step": "第24步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "样本针在清洗位置的水平和垂直高度调试",
+          "standard": "水平位置：假针下行时可自然进入夹具定位孔内\n垂直位置：假针抬起高度0.15mm",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第24步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第24步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_025",
+          "index": 25,
+          "sort_order": 2500,
+          "step": "第25步",
+          "display_step": "第25步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "试剂针在清洗池水平和垂直位置调试",
+          "standard": "水平位置：假针下行时可自然进入夹具定位孔内\n垂直位置：假针抬起高度0.15mm",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第25步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第25步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_026",
+          "index": 26,
+          "sort_order": 2600,
+          "step": "第26步",
+          "display_step": "第26步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "试剂针在反应盘水平和垂直位置调试",
+          "standard": "水平位置：假针下行时可自然进入夹具定位孔内\n垂直位置：假针抬起高度0.15mm",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第26步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第26步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_027",
+          "index": 27,
+          "sort_order": 2700,
+          "step": "第27步",
+          "display_step": "第27步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "样本针和试剂针垂直度排查和校正",
+          "standard": "1、采用真针，无需其他夹具。执行【针在清洗池水平位置】调试流程，针尖应在清洗池中心\n2、真针下降进入清洗池内，粗针部位处在清洗池中心",
+          "execution": "是",
+          "record_template": "N/A",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第27步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_028",
+          "index": 28,
+          "sort_order": 2800,
+          "step": "第28步",
+          "display_step": "第28步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "磁分离杯位偏移量调试",
+          "standard": "磁分离杯位偏移量：夹具旋转顺畅",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第28步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第28步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_029",
+          "index": 29,
+          "sort_order": 2900,
+          "step": "第29步",
+          "display_step": "第29步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "磁分离吸液位置调试",
+          "standard": "磁分离吸液位置：各吸液针抬起高度1mm-1.5mm之间",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第29步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第29步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_030",
+          "index": 30,
+          "sort_order": 3000,
+          "step": "第30步",
+          "display_step": "第30步",
+          "priority": "高",
+          "category": "位置调试",
+          "action": "磁分离注液位置调试",
+          "standard": "注液板与调试夹具之间的间隙在0～0.05mm之间，然后再下降20微步。CL-2000i原型机调试方式略有差异，详见调试指南",
+          "execution": "是",
+          "record_template": "调试前后位置变化微步数：\n水平       微步（例：向右2微步）\n垂直      微步（例：向下2微步）",
+          "before_template": "",
+          "after_template": "",
+          "record_required": true,
+          "before_required": true,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第30步_原始状态照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第30步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_031",
+          "index": 31,
+          "sort_order": 3100,
+          "step": "第31步",
+          "display_step": "第31步",
+          "priority": "低",
+          "category": "流量测试",
+          "action": "清洗池流量",
+          "standard": "指标符合软件内显示的目标范围",
+          "execution": "是",
+          "record_template": "目标流量：    \n实际流量：",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        },
+        {
+          "id": "item_032",
+          "index": 32,
+          "sort_order": 3200,
+          "step": "第32步",
+          "display_step": "第32步",
+          "priority": "低",
+          "category": "流量测试",
+          "action": "样本针、试剂针内壁清洗流量",
+          "standard": "指标符合软件内显示的目标范围",
+          "execution": "是",
+          "record_template": "目标流量：    \n实际流量：",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        },
+        {
+          "id": "item_033",
+          "index": 33,
+          "sort_order": 3300,
+          "step": "第33步",
+          "display_step": "第33步",
+          "priority": "高",
+          "category": "光学",
+          "action": "暗计数测试",
+          "standard": "反应盘外圈全部杯位暗计数值在200以内",
+          "execution": "是",
+          "record_template": "暗计数最大值：",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": true,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第33步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_034",
+          "index": 34,
+          "sort_order": 3400,
+          "step": "第34步",
+          "display_step": "第34步",
+          "priority": "低",
+          "category": "光学",
+          "action": "光学相关诊断",
+          "standard": "基础性能测试界面内DCF、光计数稳定性、光计数重复性通过",
+          "execution": "是",
+          "record_template": "拍照",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": true,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第34步_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_035",
+          "index": 35,
+          "sort_order": 3501,
+          "step": "第35步-1",
+          "display_step": "第35步-1",
+          "priority": "排查后验证",
+          "category": "未分类",
+          "action": "本底测试",
+          "standard": "连续2次测试结果：SD值小于100；均值在3900±500左右；测试未通过则参考《CL-2000i本底不过排查指南》",
+          "execution": "是",
+          "record_template": "拍照记录排查过程中的每次测试结果；\n返回性能测试数据文件：\nCL6000i目录：D:\\Mindray\\OmniLab\\OperationSoft\\SAD_1_WorkDirectory\\Diagnostics\nCL2000i（1000i）目录:  D:\\Mindray\\CL2000i（1000i）\\OperationSoft\\Instrument_1\\OperationSoft\\Instrument_1\\MaintenRecordLog\\EffectTestLog.csv",
+          "before_template": "N/A",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第35步-1_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_035_2",
+          "index": 35,
+          "sort_order": 3502,
+          "step": "第35步-2",
+          "display_step": "第35步-2",
+          "priority": "排查后验证",
+          "category": "未分类",
+          "action": "样本针和试剂针加样重复性测试",
+          "standard": "连续2次测试结果：CV值在1.5%内、（试剂针发光均值200w左右，样本针发光均值100w左右，二者比值在2左右）\n参考《底物本底正常、加样性能不过排查指南》；若多次测试依旧不达标，可采用研发权限下基础性能测试中的加样重复性测试，详细联系对应产品TS。",
+          "execution": "是",
+          "record_template": "",
+          "before_template": "",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第35步-2_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_035_3",
+          "index": 35,
+          "sort_order": 3503,
+          "step": "第35步-3",
+          "display_step": "第35步-3",
+          "priority": "排查后验证",
+          "category": "未分类",
+          "action": "清洗（缓冲）液检测",
+          "standard": "测试结果在【-500,500】内，检测失败则考虑清洗分离液管路。",
+          "execution": "是",
+          "record_template": "",
+          "before_template": "",
+          "after_template": "",
+          "record_required": false,
+          "before_required": false,
+          "after_required": true,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": [
+            {
+              "path": "images/一线模板医院_SN-TEMPLATE-001_第35步-3_调试后照片_1.jpg",
+              "original_name": "v3_template_photo.jpg",
+              "size": 3028,
+              "original_size": 3028,
+              "compressed": false
+            }
+          ]
+        },
+        {
+          "id": "item_035_4",
+          "index": 35,
+          "sort_order": 3504,
+          "step": "第35步-4",
+          "display_step": "第35步-4",
+          "priority": "排查后验证",
+          "category": "未分类",
+          "action": "低值质控重复性测试",
+          "standard": "如跳值概率>1%，即测试200次。\n如跳值概率与该项目正常表现相当，不建议测试。\n重复性验证须采用质控液，不可使用血清替代。",
+          "execution": "是",
+          "record_template": "结果界面导出测试结果数据",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        },
+        {
+          "id": "item_036",
+          "index": 36,
+          "sort_order": 3600,
+          "step": "第36步",
+          "display_step": "第36步",
+          "priority": "日志反馈",
+          "category": "未分类",
+          "action": "上述排查全部执行完毕，按各个机型日志反馈表返回相关日志。",
+          "standard": "包括但不限于故障发生当天和前后一天、排查处理当天的日志；保证远程可正常连接",
+          "execution": "是",
+          "record_template": "定标和测试数据请在对应界面备份为CSV文件",
+          "before_template": "N/A",
+          "after_template": "N/A",
+          "record_required": true,
+          "before_required": false,
+          "after_required": false,
+          "measured_value": "模板示例记录：已按该步骤完成检查，结果见现场记录。",
+          "conclusion": "正常",
+          "conclusion_class": "normal",
+          "short_description_warning": false,
+          "before_images": [],
+          "after_images": []
+        }
+      ]
+    }
+  ],
+  "attention_items": [
+    {
+      "id": "item_001",
+      "index": 1,
+      "sort_order": 100,
+      "step": "第1步",
+      "display_step": "第1步",
+      "priority": "高",
+      "category": "设备报警排查",
+      "action": "1. 筛选和查看故障日期前后的报警和维修记录，优先修复设备当下存在的必发或偶发硬件类故障。\n2. 检查系统设置，如自动维护设置、底物气泡检测设置",
+      "standard": "1. 修复发现的故障报警，如xx检测到气泡、磁分离吸液针堵针、效应检测失败等\n2. 日常清洁、底物气泡检测光耦未被屏蔽；效应检测时间间隔不大于6h。",
+      "execution": "是",
+      "record_template": "提供设备半年内维修和维护记录，及其备件更换情况。\n按时间顺序梳理，简要总结维修排查过程；",
+      "before_template": "N/A",
+      "after_template": "",
+      "record_required": true,
+      "before_required": false,
+      "after_required": true,
+      "measured_value": "模板示例记录：报警与维护记录已检查，需 RTS 确认是否补充原始状态照片。",
+      "conclusion": "待确认",
+      "conclusion_class": "pending",
+      "short_description_warning": false,
+      "before_images": [],
+      "after_images": [
+        {
+          "path": "images/一线模板医院_SN-TEMPLATE-001_第1步_调试后照片_1.jpg",
+          "original_name": "v3_template_photo.jpg",
+          "size": 3028,
+          "original_size": 3028,
+          "compressed": false
+        }
+      ]
+    }
+  ],
+  "generated_at": "2026-07-08 18:38:07"
+}

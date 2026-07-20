@@ -1,0 +1,19 @@
+{
+  "task_id": "m_20260708162711_c8d7237e",
+  "session_id": "8ab2a43a94814abc87e2167d9881a46f",
+  "token_hash": "6365d531e33cc41bfee9459d06cdb0dc5eee2e2182691f2388797d1cf390146c",
+  "status": "active",
+  "created_at": "2026-07-08 16:27:11",
+  "expires_at": "2026-07-09 00:27:11",
+  "expires_at_ts": 1783528031,
+  "last_seen_at": "",
+  "updated_at": "2026-07-08 16:27:11",
+  "updated_seq": 0,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708162711_c8d7237e&token=c44b9203aba54e0a8070a007aca084acbe8fa4cd02334911a702ed20c3a308a8",
+  "base_info": {
+    "hospital": "????",
+    "model": "A1",
+    "serial": "S1"
+  },
+  "items": []
+}

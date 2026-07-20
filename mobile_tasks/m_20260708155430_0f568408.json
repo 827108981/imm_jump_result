@@ -1,0 +1,308 @@
+{
+  "task_id": "m_20260708155430_0f568408",
+  "session_id": "mobile_upload_verify",
+  "token_hash": "a3b39cd9132bb35a8a7eadc737469bf9166ecca9f6122e8dc26de3b1b58ea9d6",
+  "status": "active",
+  "created_at": "2026-07-08 15:54:30",
+  "expires_at": "2026-07-08 23:54:30",
+  "expires_at_ts": 1783526070,
+  "last_seen_at": "2026-07-08 15:54:30",
+  "updated_at": "2026-07-08 15:54:30",
+  "updated_seq": 1,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708155430_0f568408&token=ee33bc3e202e48e79346f975015bb425ee2991d1cc464e0f8fb03f2d3dda02aa",
+  "base_info": {},
+  "items": [
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_001",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_002",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_003",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_004",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_005",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_006",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_007",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_008",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_009",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_010",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_011",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_012",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_013",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_014",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_015",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_016",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_017",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_018",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_019",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_020",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_021",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_022",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_023",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_024",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_025",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_026",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_027",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_028",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_029",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_030",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_031",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_032",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_033",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_034",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_035",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_035_2",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_035_3",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_035_4",
+      "measured_value": ""
+    },
+    {
+      "after_images": [],
+      "before_images": [],
+      "conclusion": "??",
+      "id": "item_036",
+      "measured_value": ""
+    },
+    {
+      "id": "item_035_1",
+      "measured_value": "",
+      "conclusion": "正常",
+      "before_images": [],
+      "after_images": [
+        {
+          "session_id": "mobile_upload_verify",
+          "stored_name": "1783497270728_7f515334_verify.png",
+          "original_name": "verify.png",
+          "size": 184,
+          "original_size": 184,
+          "compressed": false,
+          "url": "/uploads/mobile_upload_verify/1783497270728_7f515334_verify.png",
+          "source": "mobile"
+        }
+      ],
+      "mobile_updated_at": "2026-07-08 15:54:30"
+    }
+  ]
+}

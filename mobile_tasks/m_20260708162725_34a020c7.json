@@ -1,0 +1,28 @@
+{
+  "task_id": "m_20260708162725_34a020c7",
+  "session_id": "83145c62872743ac95a108a27aec1d7d",
+  "token_hash": "25f21246b5992d0336856aabc4edd9f8f02ecc65cf387e6ff7dc8d6ad047a5cc",
+  "status": "active",
+  "created_at": "2026-07-08 16:27:25",
+  "expires_at": "2026-07-09 00:27:25",
+  "expires_at_ts": 1783528045,
+  "last_seen_at": "2026-07-08 16:27:25",
+  "updated_at": "2026-07-08 16:27:25",
+  "updated_seq": 1,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708162725_34a020c7&token=ab72bc4f300446a5a118f2b21e8de431d8d4e2dbb2f74c61bae289761b4ded94",
+  "base_info": {
+    "hospital": "????",
+    "model": "A1",
+    "serial": "S1"
+  },
+  "items": [
+    {
+      "id": "item_001",
+      "measured_value": "????",
+      "conclusion": "正常",
+      "before_images": [],
+      "after_images": [],
+      "mobile_updated_at": "2026-07-08 16:27:25"
+    }
+  ]
+}

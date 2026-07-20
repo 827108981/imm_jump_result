@@ -1,0 +1,30 @@
+{
+  "task_id": "m_20260708172749_3646eee7",
+  "session_id": "3dea6f981b8b4abbb535e2b3d1a13cf3",
+  "token_hash": "6d300a7e453d679f89c5ab0c53c3003953df82e41283236f64997e25de7c4327",
+  "status": "active",
+  "mode": "supplement",
+  "created_at": "2026-07-08 17:27:49",
+  "expires_at": "2026-07-09 01:27:49",
+  "expires_at_ts": 1783531669,
+  "last_seen_at": "",
+  "updated_at": "2026-07-08 17:27:49",
+  "updated_seq": 0,
+  "mobile_url": "http://192.168.43.179:5000/mobile?task_id=m_20260708172749_3646eee7&token=e554edad7bd342fcbe435fb63763a42630d7ce1ca71f4799a617edfe02193c6b",
+  "base_info": {
+    "hospital": "????"
+  },
+  "supplement_note": "????",
+  "supplement_item_ids": [
+    "item_001"
+  ],
+  "items": [
+    {
+      "id": "item_001",
+      "measured_value": "",
+      "conclusion": "待确认",
+      "before_images": [],
+      "after_images": []
+    }
+  ]
+}

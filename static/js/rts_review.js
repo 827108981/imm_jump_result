@@ -26,6 +26,7 @@
     initBusyModal();
     document.getElementById("rtsFileInput").addEventListener("change", importSourceReport);
     document.getElementById("generateRtsBtn").addEventListener("click", generateRtsReport);
+    document.getElementById("markAllApprovedBtn").addEventListener("click", markAllApproved);
     document.getElementById("openOutputBtn").addEventListener("click", openOutputFolder);
     initRtsImageModal();
     document.querySelectorAll("[data-rts-filter]").forEach(function (button) {
@@ -189,7 +190,7 @@
   }
 
   function isAttentionItem(item) {
-    return ["异常", "已处理", "待确认"].indexOf(item.conclusion || "正常") !== -1;
+    return ["异常", "已处理", "待确认"].indexOf(normalizeConclusion(item)) !== -1;
   }
 
   function isMissingItem(item) {
@@ -202,7 +203,15 @@
     return false;
   }
 
+  function normalizeConclusion(item) {
+    const value = typeof item === "object" ? item.conclusion : item;
+    const itemClass = typeof item === "object" ? item.conclusion_class : "";
+    if (["正常", "异常", "已处理", "待确认"].indexOf(value) !== -1) return value;
+    return { normal: "正常", abnormal: "异常", handled: "已处理", pending: "待确认" }[itemClass] || "正常";
+  }
+
   function conclusionClass(value) {
+    value = normalizeConclusion(value);
     if (value === "异常") return "abnormal";
     if (value === "已处理") return "handled";
     if (value === "待确认") return "pending";
@@ -212,7 +221,7 @@
   function renderRtsStepReviewList() {
     const list = allReportItems();
     const root = document.getElementById("rtsStepReviewList");
-    document.getElementById("stepReviewCount").textContent = list.length + " 项";
+    document.getElementById("stepReviewCount").textContent = "0 / " + list.length + " 已审核";
     document.getElementById("supplementCount").textContent = "0 项已选";
     document.querySelectorAll("[data-rts-filter]").forEach(function (button) {
       button.classList.toggle("active", (button.dataset.rtsFilter || "all") === state.rtsFilter);
@@ -228,7 +237,7 @@
       node.addEventListener("input", onStepCardChanged);
       node.addEventListener("change", onStepCardChanged);
     });
-    updateSupplementCount();
+    updateReviewProgress();
     applyRtsFilter();
   }
 
@@ -236,6 +245,7 @@
     const key = item.id || item.display_step || item.step || String(index);
     const attention = isAttentionItem(item);
     const missing = isMissingItem(item);
+    const conclusion = normalizeConclusion(item);
     return [
       '<article class="rts-step-card' + (attention ? " is-attention" : "") + (missing ? " is-missing" : "") + '" data-item-id="' + escapeHtml(key) + '" data-attention="' + (attention ? "1" : "0") + '" data-missing="' + (missing ? "1" : "0") + '">',
       '<div class="rts-step-head">',
@@ -247,7 +257,7 @@
       renderRequiredTag("实测", item.record_required),
       renderRequiredTag("原始照片", item.before_required),
       renderRequiredTag("调试后照片", item.after_required),
-      '<span class="conclusion-pill conclusion-' + conclusionClass(item.conclusion) + '">' + escapeHtml(item.conclusion || "正常") + '</span>',
+      '<span class="conclusion-pill conclusion-' + conclusionClass(conclusion) + '">' + escapeHtml(conclusion) + '</span>',
       '</div>',
       '</div>',
       '<div class="rts-step-body">',
@@ -257,7 +267,8 @@
       '<div class="rts-source-record"><span>一线实测情况记录</span><p>' + escapeHtml(item.measured_value || "未填写") + '</p></div>',
       renderPhotoBlock(item, "before_images", "原始状态照片"),
       renderPhotoBlock(item, "after_images", "调试或维护后照片"),
-      '<label class="field rts-review-note"><span>RTS对该步骤的复核意见</span><textarea class="item-review" data-item-key="' + escapeHtml(key) + '" rows="4" placeholder="可填写该步骤的审核判断、疑点或处理意见"></textarea></label>',
+      renderDecisionControl(key),
+      '<label class="field rts-review-note"><span>RTS/GTS对该步骤的复核意见</span><textarea class="item-review" data-item-key="' + escapeHtml(key) + '" rows="4" placeholder="可填写该步骤的审核判断、疑点或处理意见"></textarea></label>',
       '</div>',
       '<div class="rts-supplement-inline">',
       '<label class="rts-supplement-toggle"><input type="checkbox" class="supplement-enable"> 要求一线补充此步骤</label>',
@@ -275,6 +286,17 @@
 
   function renderRequiredTag(label, required) {
     return '<span class="tag ' + (required ? "required" : "optional") + '">' + escapeHtml(label) + " " + (required ? "必填" : "选填") + '</span>';
+  }
+
+  function renderDecisionControl(key) {
+    const name = "review-decision-" + encodeURIComponent(String(key));
+    return [
+      '<div class="rts-decision-control" role="group" aria-label="步骤审核决定">',
+      '<span>RTS/GTS审核决定</span>',
+      '<label><input type="radio" class="item-review-decision" name="' + escapeHtml(name) + '" value="approved"> 通过</label>',
+      '<label><input type="radio" class="item-review-decision" name="' + escapeHtml(name) + '" value="supplement"> 需补充</label>',
+      '</div>'
+    ].join("");
   }
 
   function renderPhotoBlock(item, field, label) {
@@ -304,19 +326,48 @@
 
   function onStepCardChanged(event) {
     const card = event.target.closest(".rts-step-card");
-    if (card) {
-      const enabled = Boolean(card.querySelector(".supplement-enable:checked"));
-      card.classList.toggle("has-supplement", enabled);
+    if (!card) return;
+    const decision = card.querySelector(".item-review-decision:checked");
+    const supplement = card.querySelector(".supplement-enable");
+    if (event.target.classList.contains("item-review-decision")) {
+      supplement.checked = event.target.value === "supplement";
+    } else if (event.target.classList.contains("supplement-enable")) {
+      const supplementDecision = card.querySelector('.item-review-decision[value="supplement"]');
+      if (event.target.checked) supplementDecision.checked = true;
+      else if (supplementDecision.checked) supplementDecision.checked = false;
     }
-    updateSupplementCount();
+    updateStepCardState(card);
+    updateReviewProgress();
     if (state.rtsFilter === "supplement") applyRtsFilter();
   }
 
-  function updateSupplementCount() {
-    const count = document.querySelectorAll(".rts-step-card .supplement-enable:checked").length;
-    document.getElementById("supplementCount").textContent = count + " 项已选";
+  function updateStepCardState(card) {
+    const decision = card.querySelector(".item-review-decision:checked");
+    const enabled = Boolean(card.querySelector(".supplement-enable:checked"));
+    card.classList.toggle("has-supplement", enabled);
+    card.classList.toggle("is-approved", decision && decision.value === "approved");
+  }
+
+  function updateReviewProgress() {
+    const cards = Array.prototype.slice.call(document.querySelectorAll(".rts-step-card"));
+    const reviewed = cards.filter(function (card) { return card.querySelector(".item-review-decision:checked"); }).length;
+    const supplementCount = cards.filter(function (card) { return card.querySelector('.item-review-decision[value="supplement"]:checked'); }).length;
+    cards.forEach(updateStepCardState);
+    document.getElementById("stepReviewCount").textContent = reviewed + " / " + cards.length + " 已审核";
+    document.getElementById("supplementCount").textContent = supplementCount + " 项需补充";
     const supplementRequired = document.querySelector("[name='supplement_required']");
-    if (supplementRequired) supplementRequired.value = count ? "是" : "否";
+    if (supplementRequired) supplementRequired.value = supplementCount ? "是" : "否";
+  }
+
+  function markAllApproved() {
+    document.querySelectorAll('.rts-step-card .item-review-decision[value="approved"]').forEach(function (decision) {
+      decision.checked = true;
+      const card = decision.closest(".rts-step-card");
+      const supplement = card.querySelector(".supplement-enable");
+      if (supplement) supplement.checked = false;
+    });
+    updateReviewProgress();
+    if (state.rtsFilter === "supplement") applyRtsFilter();
   }
 
   function applyRtsFilter() {
@@ -331,7 +382,8 @@
       card.classList.toggle("hidden", !match);
       if (match) visible += 1;
     });
-    document.getElementById("stepReviewCount").textContent = visible + " / " + cards.length + " 项";
+    const reviewed = cards.filter(function (card) { return card.querySelector(".item-review-decision:checked"); }).length;
+    document.getElementById("stepReviewCount").textContent = reviewed + " / " + cards.length + " 已审核";
   }
 
   function initRtsImageModal() {
@@ -387,7 +439,7 @@
     return Array.prototype.slice.call(document.querySelectorAll("[data-rts-preview-image]")).map(function (node) {
       return {
         url: node.dataset.url || "",
-        original_name: node.dataset.name || "RTS审核图片"
+        original_name: node.dataset.name || "RTS/GTS审核图片"
       };
     }).filter(function (image) { return image.url; });
   }
@@ -438,7 +490,7 @@
     if (!image) return;
     const node = document.getElementById("rtsModalImage");
     node.src = image.url;
-    node.alt = image.original_name || "RTS审核图片";
+    node.alt = image.original_name || "RTS/GTS审核图片";
     node.style.transform = [
       "translate(-50%, -50%)",
       "translate(" + state.imageModal.offsetX + "px, " + state.imageModal.offsetY + "px)",
@@ -460,10 +512,19 @@
 
   function collectItemReviews() {
     const result = {};
-    Array.prototype.slice.call(document.querySelectorAll(".item-review")).forEach(function (node) {
-      if (node.value.trim()) result[node.dataset.itemKey] = node.value.trim();
+    Array.prototype.slice.call(document.querySelectorAll(".rts-step-card")).forEach(function (card) {
+      const key = card.dataset.itemId || "";
+      const decision = (card.querySelector(".item-review-decision:checked") || {}).value || "";
+      const note = (card.querySelector(".item-review") || {}).value || "";
+      if (key && (decision || note.trim())) result[key] = { decision: decision, note: note.trim() };
     });
     return result;
+  }
+
+  function unreviewedStepCount() {
+    return Array.prototype.slice.call(document.querySelectorAll(".rts-step-card")).filter(function (card) {
+      return !card.querySelector(".item-review-decision:checked");
+    }).length;
   }
 
   function collectSupplementRequests() {
@@ -486,11 +547,18 @@
     hideErrors();
     if (!state.sourceData) {
       showErrors(["请先上传一线报告 ZIP 或 report_data.json。"]);
-      showFeedback("error", "无法生成RTS审核返回报告", "请先上传一线报告 ZIP 或 report_data.json。");
+      showFeedback("error", "无法生成RTS/GTS审核返回报告", "请先上传一线报告 ZIP 或 report_data.json。");
+      return;
+    }
+    const unreviewed = unreviewedStepCount();
+    if (unreviewed) {
+      const message = "仍有 " + unreviewed + " 个步骤未选择“通过”或“需补充”。";
+      showErrors([message]);
+      showFeedback("error", "请完成逐项审核", message);
       return;
     }
     const review = collectReview();
-    if (!startBusy("正在生成RTS审核返回报告", "正在整理审核意见、补充清单和返回 ZIP，请稍候。")) return;
+    if (!startBusy("正在生成RTS/GTS审核返回报告", "正在整理审核意见、补充清单和返回 ZIP，请稍候。")) return;
     try {
       const data = await fetchJson("/api/rts/report", {
         method: "POST",
@@ -504,15 +572,15 @@
         })
       });
       state.lastOutputPath = data.output_dir;
-      setStatus("RTS报告已生成", "ok");
+      setStatus("RTS/GTS报告已生成", "ok");
       const links = '<a href="' + escapeHtml(data.report_url) + '" target="_blank">打开HTML报告</a><a href="' + escapeHtml(data.zip_url) + '" target="_blank">下载ZIP</a>';
-      showResult('RTS审核返回报告已生成。<br><a href="' + escapeHtml(data.report_url) + '" target="_blank">打开HTML报告</a> ｜ <a href="' + escapeHtml(data.zip_url) + '" target="_blank">下载ZIP</a>', false);
-      finishBusy("success", "RTS审核返回报告生成成功", "返回 ZIP 已生成，可以发送给一线补充。", links);
+      showResult('RTS/GTS审核返回报告已生成。<br><a href="' + escapeHtml(data.report_url) + '" target="_blank">打开HTML报告</a> ｜ <a href="' + escapeHtml(data.zip_url) + '" target="_blank">下载ZIP</a>', false);
+      finishBusy("success", "RTS/GTS审核返回报告生成成功", "返回 ZIP 已生成，可以发送给一线补充。", links);
     } catch (err) {
-      const message = errorMessage(err, "RTS审核返回报告生成失败。");
+      const message = errorMessage(err, "RTS/GTS审核返回报告生成失败。");
       setStatus("生成失败", "error");
       showErrors(err.errors || [message]);
-      finishBusy("error", "RTS审核返回报告生成失败", message);
+      finishBusy("error", "RTS/GTS审核返回报告生成失败", message);
     }
   }
 

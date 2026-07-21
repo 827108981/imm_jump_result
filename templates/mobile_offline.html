@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>离线一线采集｜免疫跳值排查反馈报告生成工具 V1.4</title>
+  <title>离线一线采集｜免疫跳值排查反馈报告生成工具 V1.7</title>
   <style>
     :root {
       --bg: #f5f7f8;
@@ -19,9 +19,13 @@
       --shadow: 0 14px 36px rgba(19, 32, 41, .08);
     }
     * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    html { max-width: 100%; overflow-x: hidden; overflow-x: clip; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body {
       margin: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      overflow-x: clip;
       background: var(--bg);
       color: var(--text);
       font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
@@ -233,6 +237,7 @@
     .status-pill.saving { background: #fff7e6; color: var(--warning); }
     .status-pill.error { background: #fff1ef; color: var(--danger); }
     .shell { width: min(920px, calc(100vw - 20px)); margin-top: 10px; gap: 10px; }
+    .sidebar { display: grid; gap: 10px; }
     .card { border-radius: 12px; box-shadow: none; }
     .card-head { min-height: 50px; padding: 12px 14px; }
     .notice-card { box-shadow: none; }
@@ -246,8 +251,20 @@
     .report-summary p { margin: 4px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
     .report-actions-inline { display: flex; flex-wrap: wrap; gap: 7px; }
     .report-actions-inline button { min-height: 38px; font-size: 13px; }
+    .return-review-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 14px 14px; padding: 10px 12px; border: 1px solid #f3c98b; border-radius: 9px; background: #fff8eb; }
+    .return-review-banner strong { display: block; color: #9a5b08; font-size: 13px; }
+    .return-review-banner p { margin: 3px 0 0; color: #72521f; font-size: 12px; line-height: 1.45; }
+    .return-review-banner button { flex: 0 0 auto; min-height: 34px; border-color: #d79b3c; color: #88520b; background: #fff; font-size: 12px; }
+    .rts-supplement-box { margin: 12px 0; padding: 11px; border: 1px solid #f3c98b; border-radius: 8px; background: #fff8eb; }
+    .rts-supplement-box strong { display: block; color: #9a5b08; font-size: 13px; }
+    .rts-supplement-box p { margin: 6px 0; color: #72521f; font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+    .rts-supplement-flags { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0; }
+    .rts-supplement-flags span { padding: 3px 7px; border-radius: 999px; background: #fff; color: #88520b; font-size: 12px; }
+    .rts-supplement-box .fulfilled { color: var(--ok); }
     .more-menu { position: relative; }
-    .more-menu-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 6px; border: 1px solid var(--border-soft); border-radius: 10px; background: #fff; box-shadow: 0 14px 32px rgba(18,40,43,.16); }
+    .shell, .sidebar, .card, .report-summary, .report-summary > *, .report-actions-inline, .more-menu { min-width: 0; max-width: 100%; }
+    .report-card { position: relative; z-index: 31; overflow: visible; }
+    .more-menu-panel { position: fixed; z-index: 70; display: grid; min-width: 0; width: min(208px, calc(100vw - 24px)); max-width: calc(100vw - 24px); gap: 4px; padding: 6px; border: 1px solid var(--border-soft); border-radius: 10px; background: #fff; box-shadow: 0 14px 32px rgba(18,40,43,.16); }
     .more-menu-panel button { min-height: 38px; border: 0; text-align: left; }
     .drawer-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(12,25,29,.42); }
     .report-drawer { position: fixed; right: 0; bottom: 0; left: 0; z-index: 61; max-height: min(80vh, 680px); display: grid; grid-template-rows: auto minmax(0, 1fr); border-radius: 18px 18px 0 0; background: #fff; box-shadow: 0 -14px 38px rgba(12,25,29,.2); }
@@ -278,7 +295,8 @@
     .progress-meta { margin-top: 8px; color: var(--muted); font-size: 13px; }
     .progress-actions { display: flex; gap: 8px; margin-top: 12px; }
     .progress-actions button { min-height: 40px; font-size: 13px; }
-    .filter-panel { position: sticky; top: 60px; z-index: 15; padding: 7px 10px; border-bottom: 1px solid var(--border-soft); background: rgba(255,255,255,.97); }
+    .items-card { overflow: visible; }
+    .items-card .filter-panel { position: sticky; top: 60px; z-index: 20; padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 12px 12px 0 0; background: rgba(255,255,255,.98); backdrop-filter: blur(10px); }
     .filter-heading { display: none; }
     .filter-bar { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
     .filter-bar::-webkit-scrollbar { display: none; }
@@ -286,19 +304,21 @@
     .filter-bar button b { font-size: 13px; }
     .filter-bar button small { margin: 0; color: var(--muted); font-size: 12px; }
     .filter-bar button.active small { color: #d9f2ee; }
-    .item-list { gap: 8px; padding: 10px; }
-    .item-card { position: relative; border-radius: 11px; box-shadow: none; }
+    .item-list { gap: 6px; padding: 10px; }
+    .item-card { position: relative; border-radius: 11px; box-shadow: none; scroll-margin-top: 126px; }
     .item-card::before { position: absolute; top: 0; bottom: 0; left: 0; width: 4px; border-radius: 11px 0 0 11px; background: #c3ced2; content: ""; }
-    .item-card.is-done { border-color: var(--border-soft); }
+    .item-card.is-done, .item-card.has-error, .item-card.attention { border-color: var(--border-soft); }
     .item-card.is-done::before { background: var(--ok); }
     .item-card.has-error::before { background: var(--danger); }
     .item-card.attention::before { background: #d97706; }
     .item-head { display: block; padding: 0; border: 0; background: #fff; }
-    .item-toggle { width: 100%; min-height: 72px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 11px 12px 11px 16px; border: 0; border-radius: 11px; background: transparent; text-align: left; }
-    .item-toggle h3 { margin: 0; font-size: 15px; line-height: 1.4; }
-    .item-toggle p { margin: 4px 0 0; font-size: 12px; }
-    .item-toggle .task-summary { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.35; }
-    .item-toggle .tag { align-self: start; }
+    .item-toggle { width: 100%; min-height: 64px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 9px 11px 9px 15px; border: 0; border-radius: 11px; background: transparent; text-align: left; }
+    .item-toggle h3 { margin: 0; overflow: hidden; font-size: 15px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+    .item-toggle p, .item-toggle .task-summary { margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+    .item-toggle-side { display: inline-flex; align-items: flex-start; gap: 5px; }
+    .item-toggle-side .tag { align-self: start; }
+    .toggle-chevron { align-self: center; color: var(--muted); font-size: 22px; line-height: 1; transition: transform .15s ease; }
+    .item-card.open .toggle-chevron { transform: rotate(90deg); }
     .item-body { display: none; gap: 12px; padding: 0 12px 14px 16px; border-top: 1px solid var(--border-soft); }
     .item-card.open .item-body { display: grid; }
     .item-reference { padding: 0; border: 0; background: transparent; }
@@ -311,7 +331,7 @@
     .record-grid { grid-template-columns: 1fr; gap: 10px; }
     .record-grid textarea { min-height: 112px; }
     .conclusion-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; }
-    .conclusion-grid button { min-height: 42px; padding: 0 8px; font-size: 14px; }
+    .conclusion-grid button { min-height: 44px; padding: 0 8px; font-size: 14px; }
     .conclusion-grid button.selected::after { margin-left: 4px; content: "✓"; }
     .conclusion-grid [data-value="正常"].selected { border-color: var(--ok); background: #ecfdf3; color: #075f36; }
     .conclusion-grid [data-value="异常"].selected { border-color: var(--danger); background: #fff1ef; color: var(--danger); }
@@ -329,7 +349,7 @@
     .photo-empty { margin-top: 8px; color: var(--muted); font-size: 12px; }
     .photo-status { margin-top: 7px; color: var(--ok); font-size: 12px; }
     .photo-error { margin-top: 7px; color: var(--danger); font-size: 12px; }
-    .photo-actions button:disabled { opacity: .55; }
+    .photo-actions button:disabled { border-color: #b7c2c5; background: #f2f5f6; color: #66717c; opacity: 1; }
     .error-summary { display: grid; gap: 8px; }
     .error-group { border: 1px solid #f2c3bd; border-radius: 9px; overflow: hidden; }
     .error-group summary { padding: 10px; color: var(--danger); font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -347,25 +367,53 @@
     .thumb button.thumb-open { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
     .thumb button.thumb-open img { width: 100%; height: 100%; object-fit: cover; }
     .thumb button:not(.thumb-open) { z-index: 1; }
-    .conclusion-grid button.selected { border-color: var(--accent); background: #e8f6f4; color: var(--accent-ink); }
-    .conclusion-grid button.selected::after { margin-left: 4px; content: "✓"; }
     .input-hint { min-height: 15px; color: var(--warning); font-size: 12px; }
-    .error-nav { display: flex; gap: 8px; margin-bottom: 8px; }
-    @media (max-width: 640px) {
-      .shell { width: calc(100vw - 16px); }
+    .error-nav { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .error-nav span { min-width: 0; color: var(--muted); font-size: 12px; text-align: center; }
+    .item-position { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .item-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+    .item-nav button { min-height: 42px; font-size: 13px; }
+    .item-nav span { color: var(--muted); font-size: 12px; text-align: center; white-space: nowrap; }
+    .base-head-actions { display: inline-flex; align-items: center; gap: 8px; }
+    .base-head-actions .tag { min-height: 24px; }
+    .notice-card { border: 0; background: transparent; box-shadow: none; overflow: visible; }
+    .notice-card .card-body { padding: 0; }
+    .notice { align-items: center; border: 1px solid var(--border-soft); background: #f7faf9; color: #38504e; }
+    .notice.warn { border-color: #f0c36a; background: #fff8e8; color: #6f4d11; }
+    .notice-copy { min-width: 0; }
+    .notice-details { margin-top: 6px; border: 1px solid var(--border-soft); border-radius: 9px; padding: 10px 12px; background: #fff; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .notice-details strong { display: block; color: var(--text); font-size: 13px; }
+    .notice-details ol { margin: 7px 0 0; padding-left: 19px; }
+    .notice-details li + li { margin-top: 4px; }
+    .offline-must-read { margin: 6px 2px 0; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.45; text-decoration: none; }
+    .notice-version { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    body.keyboard-open .bottom-bar { display: none; }
+    @media (max-width: 359px) {
+      .bottom-progress span { display: none; }
+      .bottom-bar { grid-template-columns: minmax(52px, 1fr) auto auto; gap: 6px; padding-right: 8px; padding-left: 8px; }
+      .bottom-bar button { padding-right: 9px; padding-left: 9px; font-size: 12px; }
+      .app-header h1 { font-size: 16px; }
+      .app-header p { max-width: 150px; }
+      .item-toggle { padding-right: 8px; }
+      .item-toggle .tag { padding-right: 6px; padding-left: 6px; font-size: 11px; }
+    }
+    @media (max-width: 960px) {
+      .shell { width: calc(100% - 16px); max-width: 760px; }
       .app-header { padding-right: 10px; padding-left: 10px; }
       .app-header p { max-width: 185px; }
       .basic-grid { grid-template-columns: 1fr; }
       .basic-grid .problem { grid-column: auto; }
       .report-summary { grid-template-columns: 1fr; }
-      .report-actions-inline { display: grid; grid-template-columns: 1fr 1fr 1fr; }
-      .report-actions-inline button { padding: 0 7px; }
+      .report-actions-inline { display: grid; grid-template-columns: 1fr 1fr; }
+      .report-actions-inline button { min-width: 0; padding: 0 7px; }
+      .report-actions-inline > button, .report-actions-inline .more-menu { width: 100%; }
+      .return-review-banner { align-items: flex-start; }
     }
     @media (min-width: 961px) {
       .shell { grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
-      .notice-card, .report-card, .base-card, .progress-card { grid-column: 1; }
+      .sidebar { position: sticky; top: 70px; display: grid; grid-column: 1; gap: 10px; align-self: start; }
       .items-card { grid-column: 2; grid-row: 1 / span 4; }
-      .filter-panel { top: 60px; }
+      .items-card .filter-panel { top: 60px; }
       .basic-grid { grid-template-columns: 1fr; }
     }
   </style>
@@ -380,39 +428,49 @@
   </header>
 
   <main class="shell">
+    <div class="sidebar">
     <section class="card notice-card" id="noticeCard">
       <div class="card-body">
         <div id="browserNotice" class="notice">
-          <span class="notice-copy">本文件可离线填写，数据会自动保存在当前手机浏览器中。建议使用 Safari、Chrome、Edge 或手机系统浏览器打开。</span>
-          <button id="dismissNoticeBtn" type="button" aria-label="关闭提示">知道了</button>
+          <span class="notice-copy">数据仅保存在当前浏览器，请完成后及时导出 ZIP。</span>
+          <button id="noticeDetailsBtn" type="button" aria-expanded="false" aria-controls="browserNoticeDetails">查看使用须知</button>
+          <button id="dismissNoticeBtn" type="button" aria-label="关闭提示">×</button>
         </div>
+        <div class="offline-must-read">首次使用建议先查看使用须知。</div>
+        <div id="browserNoticeDetails" class="notice-details hidden"><strong>使用须知</strong><ol><li>请在浏览器中打开本文件，填写过程会保存在当前浏览器。</li><li>补齐必填内容后导出正式 ZIP，发送给 RTS/GTS 审核。</li><li>收到 RTS/GTS 返回 ZIP 后重新打开本 HTML，直接导入返回 ZIP；它已包含原报告和照片。补齐指定内容后再次导出。</li></ol><p id="usageVersion" class="notice-version"></p></div>
       </div>
     </section>
 
     <section class="card report-card">
-      <div class="report-summary">
+        <div class="report-summary">
         <div>
           <h2 id="currentDraftLabel">正在加载</h2>
           <p id="currentReportMeta">本机自动缓存中</p>
         </div>
-        <div class="report-actions-inline">
-          <button id="switchReportBtn" type="button">切换报告</button>
-          <button id="newDraftBtn" type="button">新建</button>
-          <div class="more-menu">
+          <div class="report-actions-inline">
+            <button id="switchReportBtn" type="button">切换报告</button>
+            <button id="newDraftBtn" type="button">新建</button>
+            <button id="importRtsBtn" type="button">导入 RTS/GTS 返回 ZIP</button>
+            <div class="more-menu">
             <button id="moreMenuBtn" type="button" aria-haspopup="true" aria-expanded="false">更多</button>
             <div id="moreMenuPanel" class="more-menu-panel hidden">
               <button id="saveNowBtn" type="button">立即保存</button>
-              <button id="showUsageBtn" type="button">查看使用说明</button>
+              <button id="showUsageBtn" type="button">查看使用须知</button>
               <button id="exportFinalBtn" type="button">导出正式 ZIP</button>
               <button id="deleteCurrentBtn" type="button" class="danger">删除当前报告</button>
             </div>
           </div>
         </div>
+        <div id="returnReviewBanner" class="return-review-banner hidden">
+          <div><strong id="returnReviewTitle"></strong><p id="returnReviewText"></p></div>
+          <button id="reviewTodoBtn" type="button">查看待补</button>
+        </div>
+        <input id="importRtsInput" class="hidden" type="file" accept=".zip,application/zip">
       </div>
     </section>
 
     <section class="card base-card">
-      <div class="card-head"><h2>基础信息</h2><button id="baseEditBtn" type="button" class="secondary">收起</button></div>
+      <div class="card-head"><h2>基础信息</h2><div class="base-head-actions"><span id="baseStatusTag" class="tag required">未完成</span><button id="baseEditBtn" type="button" class="secondary">收起</button></div></div>
       <div class="card-body">
         <div id="baseSummary" class="base-summary hidden"></div>
         <div id="baseEditor" class="base-editor">
@@ -501,10 +559,11 @@
         </div>
       </div>
       <div id="errorPanel" class="card-body hidden">
-        <div class="error-nav"><button id="prevErrorBtn" type="button" class="secondary">上一处</button><button id="nextErrorBtn" type="button" class="secondary">下一处</button></div>
+        <div class="error-nav"><button id="prevErrorBtn" type="button" class="secondary">上一处</button><span id="errorPosition" aria-live="polite">当前第 0 处 / 共 0 处</span><button id="nextErrorBtn" type="button" class="secondary">下一处</button></div>
         <div id="errorList" class="error-summary"></div>
       </div>
     </section>
+    </div>
 
     <section class="card items-card">
       <div class="filter-panel">
@@ -513,11 +572,11 @@
           <span class="filter-tip">按问题类型只看需要处理的步骤</span>
         </div>
         <div class="filter-bar" role="tablist" aria-label="填写状态筛选">
-          <button type="button" class="active" data-filter="all" role="tab"><b>全部</b><small id="filterCountAll">0</small></button>
-          <button type="button" data-filter="todo" role="tab"><b>未完成</b><small id="filterCountTodo">0</small></button>
-          <button type="button" data-filter="photo" role="tab"><b>缺照片</b><small id="filterCountPhoto">0</small></button>
-          <button type="button" data-filter="record" role="tab"><b>缺记录</b><small id="filterCountRecord">0</small></button>
-          <button type="button" data-filter="attention" role="tab"><b>异常关注</b><small id="filterCountAttention">0</small></button>
+          <button type="button" class="active" data-filter="all" role="tab" aria-selected="true"><b>全部</b><small id="filterCountAll">0</small></button>
+          <button type="button" data-filter="todo" role="tab" aria-selected="false"><b>未完成</b><small id="filterCountTodo">0</small></button>
+          <button type="button" data-filter="photo" role="tab" aria-selected="false"><b>缺照片</b><small id="filterCountPhoto">0</small></button>
+          <button type="button" data-filter="record" role="tab" aria-selected="false"><b>缺记录</b><small id="filterCountRecord">0</small></button>
+          <button type="button" data-filter="attention" role="tab" aria-selected="false"><b>异常关注</b><small id="filterCountAttention">0</small></button>
         </div>
       </div>
       <div id="itemList" class="item-list"></div>
@@ -546,7 +605,7 @@
   <script>
     window.OFFLINE_CONFIG = {
       appName: "\u514d\u75ab\u8df3\u503c\u6392\u67e5\u53cd\u9988\u62a5\u544a\u751f\u6210\u5de5\u5177",
-      version: "V1.4",
+      version: "V1.7",
       templateName: "\u514d\u75ab\u4ea7\u54c1_\u8df3\u503c\u95ee\u9898\u7528\u670d\u5de5\u7a0b\u5e08\u6392\u67e5\u53cd\u9988\u8868_V1.0_CN.xlsx",
       packageFormatVersion: "frontline-report-v2",
       zipMaxBytes: 524288000,
@@ -587,7 +646,14 @@
         ui: {},
         photoMessages: {},
         viewerPhotos: [],
-        viewerIndex: 0
+        viewerIndex: 0,
+        drawerTrigger: null,
+        viewerTrigger: null,
+        currentErrorKey: "",
+        allowAutoErrorAdvance: false,
+        isPhotoProcessing: false,
+        isImporting: false,
+        manualRecheckRequired: false
       };
 
       document.addEventListener("DOMContentLoaded", init);
@@ -611,15 +677,28 @@
 
       function bindEvents() {
         document.getElementById("newDraftBtn").addEventListener("click", createDraft);
+        document.getElementById("importRtsBtn").addEventListener("click", function () { document.getElementById("importRtsInput").click(); });
+        document.getElementById("importRtsInput").addEventListener("change", function () {
+          importRtsReturnZip(this.files && this.files[0]).finally(function () { document.getElementById("importRtsInput").value = ""; });
+        });
+        document.getElementById("reviewTodoBtn").addEventListener("click", focusFirstPendingSupplement);
+        document.getElementById("saveNowBtn").addEventListener("click", function () { closeMoreMenu(); saveNow(true); });
         document.getElementById("checkCompletenessBtn").addEventListener("click", checkCompleteness);
         document.getElementById("exportFinalBtn").addEventListener("click", function () { exportZip("final"); });
         document.getElementById("switchReportBtn").addEventListener("click", openReportDrawer);
         document.getElementById("closeDrawerBtn").addEventListener("click", closeReportDrawer);
         document.getElementById("drawerBackdrop").addEventListener("click", closeReportDrawer);
         document.getElementById("moreMenuBtn").addEventListener("click", toggleMoreMenu);
+        document.addEventListener("click", function (event) {
+          const panel = document.getElementById("moreMenuPanel");
+          const button = document.getElementById("moreMenuBtn");
+          if (!panel || panel.classList.contains("hidden") || panel.contains(event.target) || button.contains(event.target)) return;
+          closeMoreMenu();
+        });
         document.getElementById("showUsageBtn").addEventListener("click", function () { closeMoreMenu(); localStorage.removeItem(NOTICE_STORAGE_KEY); renderBrowserNotice(true); window.scrollTo({ top: 0, behavior: "smooth" }); });
         document.getElementById("deleteCurrentBtn").addEventListener("click", function () { closeMoreMenu(); deleteDraft(state.draftId); });
-        document.getElementById("dismissNoticeBtn").addEventListener("click", function () { localStorage.setItem(NOTICE_STORAGE_KEY, "1"); document.getElementById("noticeCard").classList.add("hidden"); });
+        document.getElementById("noticeDetailsBtn").addEventListener("click", toggleBrowserNoticeDetails);
+        document.getElementById("dismissNoticeBtn").addEventListener("click", dismissBrowserNotice);
         document.getElementById("baseEditBtn").addEventListener("click", toggleBaseEditor);
         document.getElementById("nextTodoTopBtn").addEventListener("click", goToNextTodo);
         document.getElementById("bottomNextBtn").addEventListener("click", function () { if (state.lastValidationPassed && !validateReport(state.report).length) exportZip("final"); else goToNextTodo(); });
@@ -642,17 +721,26 @@
           if (!event.target.name) return;
           if (event.target.name === "engineer" || event.target.name === "contact") savePreferences(event.target.name, event.target.value);
         });
+        document.getElementById("baseForm").addEventListener("blur", function (event) {
+          if (!state.errorMode || !event.target.name) return;
+          allowAutoErrorAdvance();
+          updateStatsAndErrors(false);
+        }, true);
         document.querySelectorAll("[data-filter]").forEach(function (button) {
           button.addEventListener("click", function () {
-            document.querySelectorAll("[data-filter]").forEach(function (item) {
-              const active = item === button;
-              item.classList.toggle("active", active);
-              item.setAttribute("aria-selected", active ? "true" : "false");
-            });
-            state.filter = button.dataset.filter;
-            persistUi();
-            renderItems();
+            setFilter(button.dataset.filter, true);
           });
+        });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener("resize", function () {
+            const keyboardOpen = window.innerHeight - window.visualViewport.height > 160;
+            document.body.classList.toggle("keyboard-open", keyboardOpen);
+            if (!document.getElementById("moreMenuPanel").classList.contains("hidden")) positionMoreMenu();
+          });
+        }
+        document.addEventListener("pointerdown", function (event) {
+          const menu = document.querySelector(".more-menu");
+          if (menu && !menu.contains(event.target)) closeMoreMenu();
         });
         document.addEventListener("keydown", function (event) {
           if (event.key === "Escape") { closeImageViewer(); closeReportDrawer(); closeMoreMenu(); }
@@ -662,12 +750,36 @@
       function renderBrowserNotice(forceShow) {
         const ua = navigator.userAgent || "";
         const card = document.getElementById("noticeCard");
-        const copy = document.querySelector("#browserNotice .notice-copy");
+        const notice = document.getElementById("browserNotice");
+        const copy = notice.querySelector(".notice-copy");
+        const detailsButton = document.getElementById("noticeDetailsBtn");
+        const dismissButton = document.getElementById("dismissNoticeBtn");
+        const details = document.getElementById("browserNoticeDetails");
+        const version = document.getElementById("usageVersion");
         const inWechat = /MicroMessenger/i.test(ua);
         card.classList.toggle("hidden", !inWechat && !forceShow && localStorage.getItem(NOTICE_STORAGE_KEY) === "1");
+        notice.classList.toggle("warn", inWechat);
+        details.classList.add("hidden");
+        detailsButton.setAttribute("aria-expanded", "false");
+        detailsButton.classList.toggle("hidden", inWechat);
+        dismissButton.classList.toggle("hidden", inWechat);
         copy.textContent = inWechat
           ? "当前看起来是在微信内置浏览器中打开。为避免长时间填写、照片缓存或 ZIP 导出失败，请点右上角菜单，选择在浏览器中打开。"
-          : "本文件可离线填写，数据会自动保存在当前手机浏览器中。建议使用 Safari、Chrome、Edge 或手机系统浏览器打开。";
+          : "数据仅保存在当前浏览器，请完成后及时导出 ZIP。";
+        if (version) version.textContent = "当前工具版本：" + config.version;
+      }
+
+      function toggleBrowserNoticeDetails() {
+        const details = document.getElementById("browserNoticeDetails");
+        const button = document.getElementById("noticeDetailsBtn");
+        const hidden = details.classList.toggle("hidden");
+        button.setAttribute("aria-expanded", hidden ? "false" : "true");
+      }
+
+      function dismissBrowserNotice() {
+        if (/MicroMessenger/i.test(navigator.userAgent || "")) return;
+        localStorage.setItem(NOTICE_STORAGE_KEY, "1");
+        document.getElementById("noticeCard").classList.add("hidden");
       }
 
       function openDb() {
@@ -753,6 +865,8 @@
           updated_at: now,
           base_info: { check_date: yyyy + "-" + mm + "-" + dd, engineer: preferences.engineer || "", contact: preferences.contact || "" },
           item_data: data,
+          source_issue_no: "",
+          rts_review: null,
           last_exported_at: "",
           last_issue_no: ""
         };
@@ -806,10 +920,15 @@
       function ensureReportShape() {
         if (!state.report.base_info) state.report.base_info = {};
         if (!state.report.item_data) state.report.item_data = {};
+        if (!state.report.source_issue_no) state.report.source_issue_no = "";
+        if (state.report.rts_review) {
+          state.report.rts_review.supplement_requests = normalizeImportedSupplementRequests(state.report.rts_review.supplement_requests || []);
+        }
         config.templateItems.forEach(function (item) {
           if (!state.report.item_data[item.id]) {
             state.report.item_data[item.id] = { id: item.id, measured_value: "", conclusion: "正常", before_images: [], after_images: [] };
           }
+          state.report.item_data[item.id].conclusion = normalizeConclusion(state.report.item_data[item.id].conclusion);
         });
       }
 
@@ -837,6 +956,7 @@
       function renderAll() {
         renderBaseForm();
         renderDraftLabel();
+        renderRtsReviewBanner();
         updateStatsAndErrors(false);
         ensureExpandedItem();
         renderItems();
@@ -863,18 +983,29 @@
 
       function renderBaseSummary() {
         const base = state.report.base_info || {};
-        const complete = config.basicFields.filter(function (field) { return field.required; }).every(function (field) { return String(base[field.key] || "").trim(); });
+        const complete = isBaseInfoComplete();
         const summary = document.getElementById("baseSummary");
         const editor = document.getElementById("baseEditor");
         const button = document.getElementById("baseEditBtn");
+        const statusTag = document.getElementById("baseStatusTag");
         const collapsed = !!state.ui.baseCollapsed && complete;
         summary.classList.toggle("hidden", !collapsed);
         editor.classList.toggle("hidden", collapsed);
-        button.textContent = collapsed ? "编辑" : (complete ? "收起" : "请补全");
+        statusTag.classList.toggle("hidden", complete);
+        statusTag.textContent = "未完成";
+        button.classList.toggle("hidden", !complete);
+        button.textContent = collapsed ? "编辑" : "收起";
         if (collapsed) {
           summary.innerHTML = '<div><strong>' + escapeHtml(base.hospital || "未填写医院") + ' / ' + escapeHtml(base.model || "未填写型号") + '</strong><p>序列号：' + escapeHtml(base.serial || "未填写") + ' · 工程师：' + escapeHtml(base.engineer || "未填写") + '</p></div><button type="button" data-edit-base>编辑</button>';
           summary.querySelector("[data-edit-base]").addEventListener("click", toggleBaseEditor);
         }
+      }
+
+      function isBaseInfoComplete() {
+        const base = (state.report && state.report.base_info) || {};
+        return config.basicFields.filter(function (field) { return field.required; }).every(function (field) {
+          return String(base[field.key] || "").trim();
+        });
       }
 
       function renderDrafts() {
@@ -916,64 +1047,185 @@
         return '<span class="field-kind ' + (required ? "required" : "optional") + '">' + (required ? "必填" : (optionalText || "选填")) + '</span>';
       }
 
-      function requirementTags(item) {
-        const required = [];
-        const optional = ["排查结论"];
-        if (item.record_required) required.push("实测记录"); else optional.push("实测记录");
-        if (item.before_required) required.push("原始照片"); else optional.push("原始照片");
-        if (item.after_required) required.push("维护后照片"); else optional.push("维护后照片");
-        return (required.length ? '<span class="requirement-tag required">必填：' + required.join("、") + '</span>' : '') +
-          '<span class="requirement-tag optional">选填：' + optional.join("、") + '</span>';
+      function itemMatchesFilter(item, filter) {
+        const data = itemData(item.id);
+        if (filter === "all") return true;
+        if (filter === "todo") return !isItemDone(item, data);
+        if (filter === "photo") return (item.before_required && !data.before_images.length) || (item.after_required && !data.after_images.length);
+        if (filter === "record") return item.record_required && !String(data.measured_value || "").trim();
+        if (filter === "attention") return ["异常", "已处理", "待确认"].includes(data.conclusion);
+        return true;
+      }
+
+      function visibleItems() {
+        return config.templateItems.filter(function (item) { return itemMatchesFilter(item, state.filter); });
+      }
+
+      function currentErrorSet() {
+        return new Set((state.lastErrors || []).map(function (err) {
+          return (err.item_id || "") + "::" + (err.field || "");
+        }));
+      }
+
+      function buildTaskSummary(item, data) {
+        const parts = [];
+        const photoCount = (data.before_images || []).length + (data.after_images || []).length;
+        if (item.record_required) parts.push(String(data.measured_value || "").trim().length >= 2 ? "记录已填" : "缺实测记录");
+        if (item.before_required) parts.push((data.before_images || []).length ? "原始照片 " + data.before_images.length + " 张" : "缺原始照片");
+        if (item.after_required) parts.push((data.after_images || []).length ? "维护后照片 " + data.after_images.length + " 张" : "缺维护后照片");
+        if (!parts.length) return photoCount ? "照片 " + photoCount + " 张" : "无必填附件";
+        if (!item.before_required && !item.after_required) parts.push("照片 " + photoCount + " 张");
+        return parts.join(" · ");
+      }
+
+      function itemStatus(item, data, hasError) {
+        if (hasPendingSupplement(item.id)) return "需补充";
+        if (["异常", "已处理", "待确认"].includes(data.conclusion)) return data.conclusion;
+        if (isItemDone(item, data)) return "已完成";
+        return hasError ? "待补" : "待填写";
+      }
+
+      function itemStatusClass(status) {
+        return status === "已完成" || status === "已处理" ? "done" : "required";
+      }
+
+      function supplementRequestsFor(itemId, report) {
+        const review = (report || state.report || {}).rts_review || {};
+        return (review.supplement_requests || []).filter(function (request) { return request && request.item_id === itemId; });
+      }
+
+      function pendingSupplementRequests(report) {
+        const review = (report || state.report || {}).rts_review || {};
+        return (review.supplement_requests || []).filter(function (request) { return request && !request.fulfilled; });
+      }
+
+      function hasPendingSupplement(itemId, report) {
+        return supplementRequestsFor(itemId, report).some(function (request) { return !request.fulfilled; });
+      }
+
+      function renderRtsSupplement(itemId) {
+        const requests = supplementRequestsFor(itemId);
+        if (!requests.length) return "";
+        const pending = requests.filter(function (request) { return !request.fulfilled; });
+        const flags = [];
+        requests.forEach(function (request) {
+          if (request.need_record) flags.push("补记录");
+          if (request.need_before) flags.push("补原始照片");
+          if (request.need_after) flags.push("补调试后照片");
+        });
+        const requirement = requests.map(function (request) { return request.requirement || "请按 RTS/GTS 审核意见补充资料。"; }).filter(Boolean).join("\n");
+        return [
+          '<section class="rts-supplement-box">',
+          '<strong>RTS/GTS 补充要求' + (pending.length ? "（待处理）" : "（已确认补充）") + '</strong>',
+          flags.length ? '<div class="rts-supplement-flags">' + flags.map(function (flag) { return '<span>' + escapeHtml(flag) + '</span>'; }).join("") + '</div>' : '',
+          '<p>' + escapeHtml(requirement) + '</p>',
+          pending.length ? '<button type="button" data-complete-supplement="' + escapeHtml(itemId) + '">确认已按要求补充</button>' : '<p class="fulfilled">已确认补充，可重新进行完整性检查。</p>',
+          '</section>'
+        ].join("");
+      }
+
+      function renderRtsReviewBanner() {
+        const banner = document.getElementById("returnReviewBanner");
+        const title = document.getElementById("returnReviewTitle");
+        const text = document.getElementById("returnReviewText");
+        const button = document.getElementById("reviewTodoBtn");
+        const review = (state.report || {}).rts_review;
+        if (!banner || !title || !text || !button) return;
+        if (!review) {
+          banner.classList.add("hidden");
+          return;
+        }
+        const pending = pendingSupplementRequests();
+        banner.classList.remove("hidden");
+        title.textContent = "已导入 RTS/GTS 返回审核" + (review.review_no ? "｜" + review.review_no : "");
+        text.textContent = pending.length ? "有 " + pending.length + " 项补充要求，确认补充前不能再次导出正式 ZIP。" : "补充要求已确认完成，可进行完整性检查后重新导出。";
+        button.disabled = !pending.length;
+        button.textContent = pending.length ? "查看待补" : "已完成";
+      }
+
+      function focusFirstPendingSupplement() {
+        const request = pendingSupplementRequests()[0];
+        if (!request) {
+          showToast("当前没有待补的 RTS/GTS 要求。");
+          return;
+        }
+        state.filter = "all";
+        state.ui.expandedItemId = request.item_id;
+        state.ui.referenceOpen[request.item_id] = true;
+        persistUi();
+        renderItems();
+        window.setTimeout(function () {
+          const target = document.querySelector("[data-item-id='" + cssEscape(request.item_id) + "']");
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 30);
+      }
+
+      async function completeSupplement(itemId) {
+        const requests = supplementRequestsFor(itemId).filter(function (request) { return !request.fulfilled; });
+        if (!requests.length) return;
+        if (!confirm("确认已按 RTS/GTS 要求补齐本步骤资料吗？")) return;
+        requests.forEach(function (request) {
+          request.fulfilled = true;
+          request.fulfilled_at = isoNow();
+        });
+        state.lastValidationPassed = false;
+        await saveNow();
+        renderDraftLabel();
+        renderRtsReviewBanner();
+        allowAutoErrorAdvance(true);
+        updateStatsAndErrors(state.errorMode);
+        refreshItemCard(itemId);
+        showToast("已记录本步骤补充完成，请重新进行完整性检查。");
+      }
+
+      function getCurrentItemPosition(itemId) {
+        const index = config.templateItems.findIndex(function (item) { return item.id === itemId; });
+        return { index: index, current: index >= 0 ? index + 1 : 0, total: config.templateItems.length };
       }
 
       function renderItems() {
         const root = document.getElementById("itemList");
-        const errors = new Set((state.lastErrors || []).map(function (err) {
-          return (err.item_id || "") + "::" + (err.field || "");
-        }));
-        const visibleItems = config.templateItems.filter(function (item) {
-          const data = itemData(item.id);
-          if (state.filter === "all") return true;
-          if (state.filter === "todo") return !isItemDone(item, data);
-          if (state.filter === "photo") return (item.before_required && !data.before_images.length) || (item.after_required && !data.after_images.length);
-          if (state.filter === "record") return item.record_required && !String(data.measured_value || "").trim();
-          if (state.filter === "attention") return ["异常", "已处理", "待确认"].includes(data.conclusion);
-          return true;
-        });
-        root.innerHTML = visibleItems.map(function (item) {
-          const data = itemData(item.id);
-          const itemHasError = state.lastErrors.some(function (err) { return err.item_id === item.id; });
-          const done = isItemDone(item, data);
-          const open = state.ui.expandedItemId === item.id;
-          const referenceOpen = !!(state.ui.referenceOpen || {})[item.id];
-          const photoCount = (data.before_images || []).length + (data.after_images || []).length;
-          const action = String(item.action || "").replace(/\s+/g, " ").trim();
-          const shortAction = action.length > 58 ? action.slice(0, 58) + "…" : action;
-          const attention = ["异常", "已处理", "待确认"].includes(data.conclusion);
-          return [
-            '<article class="item-card ' + (open ? "open " : "") + (itemHasError ? "has-error " : "") + (done ? "is-done " : "") + (attention ? "attention" : "") + '" data-item-id="' + escapeHtml(item.id) + '">',
-            '<div class="item-head"><button class="item-toggle" type="button" data-toggle-item="' + escapeHtml(item.id) + '" aria-expanded="' + (open ? "true" : "false") + '" aria-controls="item_body_' + escapeHtml(item.id) + '">',
-            '<div><h3>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(shortAction) + '</h3><p>分类：' + escapeHtml(item.category || "未分类") + ' · 照片 ' + photoCount + '</p><div class="requirement-tags">' + requirementTags(item) + '</div></div>',
-            '<span class="tag ' + (done ? "done" : "required") + '">' + (done ? "已完成" : (itemHasError ? "待补" : "待填写")) + '</span></button></div>',
-            open ? renderItemBody(item, data, errors, referenceOpen) : '',
-            '</article>'
-          ].join("");
-        }).join("") || '<div class="empty">当前筛选下没有排查项。<button type="button" data-show-all>查看全部</button></div>';
+        const errors = currentErrorSet();
+        const items = visibleItems();
+        root.innerHTML = items.map(function (item) { return renderItemCard(item, errors); }).join("") || '<div class="empty">当前筛选下没有排查项。<button type="button" data-show-all>查看全部</button></div>';
         bindItemEvents(root);
+      }
+
+      function renderItemCard(item, errors) {
+        const data = itemData(item.id);
+        const itemHasError = (state.lastErrors || []).some(function (err) { return err.item_id === item.id; });
+        const done = isItemDone(item, data);
+        const open = state.ui.expandedItemId === item.id;
+        const referenceOpen = !!(state.ui.referenceOpen || {})[item.id];
+        const action = String(item.action || "").replace(/\s+/g, " ").trim();
+        const shortAction = action.length > 30 ? action.slice(0, 30) + "…" : action;
+        const attention = ["异常", "已处理", "待确认"].includes(data.conclusion);
+        const status = itemStatus(item, data, itemHasError);
+        return [
+          '<article class="item-card ' + (open ? "open " : "") + (itemHasError ? "has-error " : "") + (done ? "is-done " : "") + (attention ? "attention" : "") + '" data-item-id="' + escapeHtml(item.id) + '">',
+          '<div class="item-head"><button class="item-toggle" type="button" data-toggle-item="' + escapeHtml(item.id) + '" aria-label="' + escapeHtml((item.display_step || item.step) + " " + action) + '" aria-expanded="' + (open ? "true" : "false") + '" aria-controls="item_body_' + escapeHtml(item.id) + '">',
+          '<div><h3 title="' + escapeHtml(action) + '">' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(shortAction) + '</h3><p class="task-summary" data-task-summary="' + escapeHtml(item.id) + '">分类：' + escapeHtml(item.category || "未分类") + ' · ' + escapeHtml(buildTaskSummary(item, data)) + '</p></div>',
+          '<span class="item-toggle-side"><span class="tag ' + itemStatusClass(status) + '" data-item-status="' + escapeHtml(item.id) + '">' + escapeHtml(status) + '</span><span class="toggle-chevron" aria-hidden="true">›</span></span></button></div>',
+          open ? renderItemBody(item, data, errors, referenceOpen) : '',
+          '</article>'
+        ].join("");
       }
 
       function renderItemBody(item, data, errors, referenceOpen) {
         const recordPlaceholder = item.record_template && item.record_template !== "N/A" ? item.record_template : "请填写现场实测情况、处理动作或结果";
+        const position = getCurrentItemPosition(item.id);
         return [
           '<div class="item-body" id="item_body_' + escapeHtml(item.id) + '">',
+          '<div class="item-position">当前第 ' + position.current + ' 项 / 共 ' + position.total + ' 项</div>',
           '<section class="item-reference"><button type="button" class="reference-toggle" data-reference-toggle="' + escapeHtml(item.id) + '" aria-expanded="' + (referenceOpen ? "true" : "false") + '" aria-controls="reference_' + escapeHtml(item.id) + '"><span>查看排查要求与合格标准</span><span aria-hidden="true">' + (referenceOpen ? "收起" : "展开") + '</span></button>',
           '<div id="reference_' + escapeHtml(item.id) + '" class="reference-content ' + (referenceOpen ? "open" : "") + '"><div class="detail"><span>排查动作</span><p>' + escapeHtml(item.action || "") + '</p></div><div class="detail"><span>合格指标</span><p>' + escapeHtml(item.standard || "") + '</p></div></div></section>',
           '<div class="record-grid">',
-          '<label class="field"><span class="field-heading">实测情况记录' + fieldKind(item.record_required) + '</span><textarea rows="4" placeholder="' + escapeHtml(recordPlaceholder) + '" data-record="' + escapeHtml(item.id) + '" class="' + (errors.has(item.id + "::measured_value") ? "has-error" : "") + '">' + escapeHtml(data.measured_value || "") + '</textarea><small class="input-hint" data-record-hint="' + escapeHtml(item.id) + '"></small></label>',
+          '<label class="field"><span class="field-heading">实测情况记录' + fieldKind(item.record_required) + '</span><textarea rows="4" placeholder="' + escapeHtml(recordPlaceholder) + '" data-record="' + escapeHtml(item.id) + '" class="' + (errors.has(item.id + "::measured_value") ? "has-error" : "") + '">' + escapeHtml(data.measured_value || "") + '</textarea><small class="input-hint" data-record-hint="' + escapeHtml(item.id) + '">' + (errors.has(item.id + "::measured_value") && String(data.measured_value || "").trim().length > 0 ? "内容过短，请补充有效描述" : "") + '</small></label>',
           '<div class="field"><span class="field-heading">排查结论' + fieldKind(false, "选填，默认正常") + '</span><div class="conclusion-grid">' + CONCLUSIONS.map(function (value) { return '<button type="button" data-conclusion="' + escapeHtml(item.id) + '" data-value="' + value + '" class="' + (value === data.conclusion ? "selected" : "") + '" aria-pressed="' + (value === data.conclusion ? "true" : "false") + '">' + value + '</button>'; }).join("") + '</div></div>',
+          renderRtsSupplement(item.id),
           '</div><div class="photo-row">',
           renderPhotoBox(item, "before_images", errors), renderPhotoBox(item, "after_images", errors),
-          '</div></div>'
+          '</div><nav class="item-nav" aria-label="排查项顺序导航"><button type="button" data-prev-item="' + escapeHtml(item.id) + '"' + (position.index === 0 ? " disabled" : "") + '>上一项</button><span>第 ' + position.current + ' / ' + position.total + ' 项</span><button type="button" data-next-item="' + escapeHtml(item.id) + '"' + (position.index === position.total - 1 ? " disabled" : "") + '>下一项</button></nav></div>'
         ].join("");
       }
 
@@ -989,12 +1241,13 @@
           '<div class="photo-box">',
           '<div class="photo-head"><div><div class="field-heading"><span>' + FIELD_LABELS[field] + '</span>' + fieldKind(required) + '</div><p class="field-note">' + note + '</p></div><span>' + images.length + '/' + config.maxImagesPerField + '</span></div>',
           '<div class="photo-actions">',
-          '<label><button type="button" data-trigger="' + safe + '_camera"' + (atLimit ? " disabled" : "") + '>拍照</button><input id="' + safe + '_camera" type="file" accept="image/*" capture="environment" data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
-          '<label><button type="button" data-trigger="' + safe + '_album"' + (atLimit ? " disabled" : "") + '>选图</button><input id="' + safe + '_album" type="file" accept="image/*" multiple data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
+          '<label><button type="button" data-trigger="' + safe + '_camera"' + (atLimit ? " disabled" : "") + '>' + (atLimit ? "拍照已达上限" : "拍照") + '</button><input id="' + safe + '_camera" type="file" accept="image/*" capture="environment" data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
+          '<label><button type="button" data-trigger="' + safe + '_album"' + (atLimit ? " disabled" : "") + '>' + (atLimit ? "选图已达上限" : "选图") + '</button><input id="' + safe + '_album" type="file" accept="image/*" multiple data-photo-field="' + field + '" data-photo-item="' + item.id + '"></label>',
           '</div>',
           images.length ? '<div class="photo-grid">' + images.map(function (image) {
-            return '<div class="thumb"><button type="button" class="thumb-open" data-open-photo="' + escapeHtml(image.photo_id) + '" aria-label="预览照片"><img src="' + escapeHtml(state.previewUrls[image.photo_id] || "") + '" alt="' + escapeHtml(image.original_name || "图片") + '"></button><button type="button" data-delete-photo="' + escapeHtml(image.photo_id) + '" data-delete-item="' + escapeHtml(item.id) + '" data-delete-field="' + field + '">删</button></div>';
+            return '<div class="thumb"><button type="button" class="thumb-open" data-open-photo="' + escapeHtml(image.photo_id) + '" aria-label="预览照片"><img src="' + escapeHtml(state.previewUrls[image.photo_id] || "") + '" alt="' + escapeHtml(image.original_name || "图片") + '"></button><button type="button" data-delete-photo="' + escapeHtml(image.photo_id) + '" data-delete-item="' + escapeHtml(item.id) + '" data-delete-field="' + field + '" aria-label="删除照片">删</button></div>';
           }).join("") + '</div>' : '<div class="photo-empty ' + (errors.has(item.id + "::" + field) ? "error-line" : "") + '">暂无照片</div>',
+          atLimit ? '<div class="photo-status">已达到最多 ' + config.maxImagesPerField + ' 张</div>' : '',
           message ? '<div class="' + (message.indexOf("失败") > -1 ? "photo-error" : "photo-status") + '">' + escapeHtml(message) + '</div>' : '',
           '</div>'
         ].join("");
@@ -1006,7 +1259,7 @@
           node.addEventListener("click", function () { setExpandedItem(node.dataset.toggleItem); });
         });
         root.querySelectorAll("[data-reference-toggle]").forEach(function (node) {
-          node.addEventListener("click", function () { state.ui.referenceOpen[node.dataset.referenceToggle] = !state.ui.referenceOpen[node.dataset.referenceToggle]; persistUi(); renderItems(); });
+          node.addEventListener("click", function () { toggleReference(node.dataset.referenceToggle); });
         });
         root.querySelectorAll("[data-record]").forEach(function (node) {
           node.addEventListener("input", function () {
@@ -1014,18 +1267,24 @@
             autoResize(node);
             scheduleSave();
             updateStatsAndErrors(false);
+            updateItemChrome(node.dataset.record);
           });
           node.addEventListener("blur", function () {
             const hint = root.querySelector("[data-record-hint='" + node.dataset.record + "']");
             if (hint) hint.textContent = node.value.trim() && node.value.trim().length < 2 ? "内容过短，请补充有效描述" : "";
+            if (state.errorMode) {
+              allowAutoErrorAdvance();
+              updateStatsAndErrors(false);
+            }
           });
         });
         root.querySelectorAll("[data-conclusion]").forEach(function (node) {
           node.addEventListener("click", function () {
             itemData(node.dataset.conclusion).conclusion = node.dataset.value || "正常";
             scheduleSave();
-            renderItems();
             updateStatsAndErrors(false);
+            updateConclusionButtons(node.dataset.conclusion);
+            updateItemChrome(node.dataset.conclusion);
           });
         });
         root.querySelectorAll("[data-trigger]").forEach(function (button) {
@@ -1047,8 +1306,109 @@
           });
         });
         root.querySelectorAll("[data-open-photo]").forEach(function (button) {
-          button.addEventListener("click", function () { openImageViewer(button.dataset.openPhoto); });
+          button.addEventListener("click", function () { openImageViewer(button.dataset.openPhoto, button); });
         });
+        root.querySelectorAll("[data-complete-supplement]").forEach(function (button) {
+          button.addEventListener("click", function () { completeSupplement(button.dataset.completeSupplement); });
+        });
+        root.querySelectorAll("[data-prev-item]").forEach(function (button) {
+          button.addEventListener("click", function () { goToAdjacentItem(button.dataset.prevItem, -1); });
+        });
+        root.querySelectorAll("[data-next-item]").forEach(function (button) {
+          button.addEventListener("click", function () { goToAdjacentItem(button.dataset.nextItem, 1); });
+        });
+      }
+
+      function updateItemChrome(itemId) {
+        const item = config.templateItems.find(function (entry) { return entry.id === itemId; });
+        const card = document.querySelector("[data-item-id='" + cssEscape(itemId) + "']");
+        if (!item || !card) return;
+        const data = itemData(itemId);
+        const hasError = (state.lastErrors || []).some(function (err) { return err.item_id === itemId; });
+        const done = isItemDone(item, data);
+        const attention = ["异常", "已处理", "待确认"].includes(data.conclusion);
+        const status = itemStatus(item, data, hasError);
+        card.classList.toggle("is-done", done);
+        card.classList.toggle("has-error", hasError);
+        card.classList.toggle("attention", attention);
+        const summary = card.querySelector("[data-task-summary]");
+        if (summary) summary.textContent = "分类：" + (item.category || "未分类") + " · " + buildTaskSummary(item, data);
+        const statusNode = card.querySelector("[data-item-status]");
+        if (statusNode) {
+          statusNode.textContent = status;
+          statusNode.className = "tag " + itemStatusClass(status);
+        }
+      }
+
+      function updateConclusionButtons(itemId) {
+        const card = document.querySelector("[data-item-id='" + cssEscape(itemId) + "']");
+        if (!card) return;
+        const value = itemData(itemId).conclusion || "正常";
+        card.querySelectorAll("[data-conclusion]").forEach(function (button) {
+          const selected = button.dataset.value === value;
+          button.classList.toggle("selected", selected);
+          button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+      }
+
+      function refreshItemCard(itemId) {
+        const current = document.querySelector("[data-item-id='" + cssEscape(itemId) + "']");
+        const item = config.templateItems.find(function (entry) { return entry.id === itemId; });
+        if (!current || !item) return;
+        const scrollY = window.scrollY;
+        const holder = document.createElement("div");
+        holder.innerHTML = renderItemCard(item, currentErrorSet());
+        const replacement = holder.firstElementChild;
+        current.replaceWith(replacement);
+        bindItemEvents(replacement);
+        window.scrollTo(0, scrollY);
+      }
+
+      function toggleReference(itemId) {
+        state.ui.referenceOpen[itemId] = !state.ui.referenceOpen[itemId];
+        persistUi();
+        const button = document.querySelector("[data-reference-toggle='" + cssEscape(itemId) + "']");
+        const content = document.getElementById("reference_" + itemId);
+        if (!button || !content) return;
+        const open = !!state.ui.referenceOpen[itemId];
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+        const label = button.querySelector("span:last-child");
+        if (label) label.textContent = open ? "收起" : "展开";
+        content.classList.toggle("open", open);
+      }
+
+      function updateFilterButtons() {
+        document.querySelectorAll("[data-filter]").forEach(function (button) {
+          const active = button.dataset.filter === state.filter;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", active ? "true" : "false");
+        });
+      }
+
+      function setFilter(filter, scrollSelected, skipRender) {
+        state.filter = filter || "all";
+        const items = visibleItems();
+        if (items.length && !items.some(function (item) { return item.id === state.ui.expandedItemId; })) {
+          state.ui.expandedItemId = items[0].id;
+          if (state.ui.referenceOpen[items[0].id] === undefined) state.ui.referenceOpen[items[0].id] = !isItemDone(items[0], itemData(items[0].id));
+        }
+        if (!items.length) state.ui.expandedItemId = "";
+        updateFilterButtons();
+        persistUi();
+        if (!skipRender) renderItems();
+        if (scrollSelected) {
+          const selected = document.querySelector("[data-filter='" + cssEscape(state.filter) + "']");
+          if (selected) selected.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        }
+      }
+
+      async function goToAdjacentItem(itemId, delta) {
+        const position = getCurrentItemPosition(itemId);
+        const target = config.templateItems[position.index + delta];
+        if (!target) return;
+        await saveNow();
+        if (!itemMatchesFilter(target, state.filter)) setFilter("all", false, true);
+        setExpandedItem(target.id);
       }
 
       function readPreferences() {
@@ -1072,11 +1432,7 @@
         }
         state.ui.referenceOpen = state.ui.referenceOpen || {};
         state.filter = state.ui.filter || "all";
-        document.querySelectorAll("[data-filter]").forEach(function (button) {
-          const active = button.dataset.filter === state.filter;
-          button.classList.toggle("active", active);
-          button.setAttribute("aria-selected", active ? "true" : "false");
-        });
+        updateFilterButtons();
       }
 
       function persistUi() {
@@ -1114,8 +1470,7 @@
       }
 
       function toggleBaseEditor() {
-        const base = state.report.base_info || {};
-        const complete = config.basicFields.filter(function (field) { return field.required; }).every(function (field) { return String(base[field.key] || "").trim(); });
+        const complete = isBaseInfoComplete();
         if (!complete) {
           state.ui.baseCollapsed = false;
           showToast("请先补全基础信息。");
@@ -1129,13 +1484,19 @@
       function openReportDrawer() {
         closeMoreMenu();
         renderDrafts();
+        state.drawerTrigger = document.getElementById("switchReportBtn");
         document.getElementById("drawerBackdrop").classList.remove("hidden");
         document.getElementById("reportDrawer").classList.remove("hidden");
+        window.setTimeout(function () { document.getElementById("closeDrawerBtn").focus(); }, 0);
       }
 
       function closeReportDrawer() {
         document.getElementById("drawerBackdrop").classList.add("hidden");
         document.getElementById("reportDrawer").classList.add("hidden");
+        if (state.drawerTrigger && typeof state.drawerTrigger.focus === "function") {
+          state.drawerTrigger.focus({ preventScroll: true });
+        }
+        state.drawerTrigger = null;
       }
 
       function toggleMoreMenu() {
@@ -1143,13 +1504,43 @@
         const button = document.getElementById("moreMenuBtn");
         const hidden = panel.classList.toggle("hidden");
         button.setAttribute("aria-expanded", hidden ? "false" : "true");
+        if (!hidden) positionMoreMenu();
       }
 
       function closeMoreMenu() {
         const panel = document.getElementById("moreMenuPanel");
         const button = document.getElementById("moreMenuBtn");
-        if (panel) panel.classList.add("hidden");
+        if (panel) {
+          panel.classList.add("hidden");
+          panel.style.left = "";
+          panel.style.top = "";
+          panel.style.width = "";
+          panel.style.maxHeight = "";
+        }
         if (button) button.setAttribute("aria-expanded", "false");
+      }
+
+      function positionMoreMenu() {
+        const panel = document.getElementById("moreMenuPanel");
+        const button = document.getElementById("moreMenuBtn");
+        if (!panel || !button || panel.classList.contains("hidden")) return;
+        const viewport = window.visualViewport;
+        const viewportLeft = viewport ? viewport.offsetLeft : 0;
+        const viewportTop = viewport ? viewport.offsetTop : 0;
+        const viewportWidth = viewport ? viewport.width : window.innerWidth;
+        const viewportHeight = viewport ? viewport.height : window.innerHeight;
+        const padding = 12;
+        const panelWidth = Math.max(150, Math.min(208, viewportWidth - padding * 2));
+        const rect = button.getBoundingClientRect();
+        const maxLeft = viewportLeft + viewportWidth - panelWidth - padding;
+        const left = Math.max(viewportLeft + padding, Math.min(rect.right - panelWidth, maxLeft));
+        panel.style.width = panelWidth + "px";
+        panel.style.maxHeight = Math.max(120, viewportHeight - padding * 2) + "px";
+        panel.style.left = left + "px";
+        panel.style.top = (rect.bottom + 6) + "px";
+        const panelRect = panel.getBoundingClientRect();
+        const maxTop = viewportTop + viewportHeight - panelRect.height - padding;
+        panel.style.top = Math.max(viewportTop + padding, Math.min(rect.bottom + 6, maxTop)) + "px";
       }
 
       function goToNextTodo() {
@@ -1159,8 +1550,7 @@
         let next = candidates.find(function (item) { return config.templateItems.indexOf(item) > startIndex; });
         if (!next) next = candidates[0];
         if (state.filter !== "all" && state.filter !== "todo") {
-          state.filter = "todo";
-          document.querySelectorAll("[data-filter]").forEach(function (button) { button.classList.toggle("active", button.dataset.filter === "todo"); });
+          setFilter("todo", false, true);
         }
         setExpandedItem(next.id);
       }
@@ -1183,10 +1573,13 @@
         const errors = validateReport(state.report);
         if (!errors.length) { showToast("当前没有待补内容。"); return; }
         state.errorIndex = (state.errorIndex + delta + errors.length) % errors.length;
+        state.currentErrorKey = errorKey(errors[state.errorIndex]);
+        state.lastErrors = errors;
+        updateStatsAndErrors(true);
         focusErrorTarget(errors[state.errorIndex]);
       }
 
-      function openImageViewer(photoId) {
+      function openImageViewer(photoId, trigger) {
         state.viewerPhotos = [];
         config.templateItems.forEach(function (item) {
           ["before_images", "after_images"].forEach(function (field) {
@@ -1194,8 +1587,10 @@
           });
         });
         state.viewerIndex = Math.max(0, state.viewerPhotos.findIndex(function (image) { return image.photo_id === photoId; }));
+        state.viewerTrigger = trigger || null;
         renderImageViewer();
         document.getElementById("imageViewer").classList.remove("hidden");
+        window.setTimeout(function () { document.getElementById("viewerCloseBtn").focus(); }, 0);
       }
 
       function renderImageViewer() {
@@ -1215,6 +1610,10 @@
       function closeImageViewer() {
         const viewer = document.getElementById("imageViewer");
         if (viewer) viewer.classList.add("hidden");
+        if (state.viewerTrigger && typeof state.viewerTrigger.focus === "function") {
+          state.viewerTrigger.focus({ preventScroll: true });
+        }
+        state.viewerTrigger = null;
       }
 
       function autoResize(node) {
@@ -1251,37 +1650,45 @@
         const data = itemData(itemId);
         const messageKey = itemId + "::" + field;
         if ((data[field] || []).length + files.length > config.maxImagesPerField) {
+          state.photoMessages[messageKey] = "本次选择超过最多 " + config.maxImagesPerField + " 张，请重新选择";
+          refreshItemCard(itemId);
           showToast("每个位置最多上传 " + config.maxImagesPerField + " 张照片。");
           return;
         }
         state.photoMessages[messageKey] = "正在处理照片…";
-        renderItems();
+        refreshItemCard(itemId);
         setSaveStatus("处理照片");
         let failures = 0;
-        for (const file of files) {
-          try {
-            const processed = await preprocessImage(file);
-            const photoId = "photo_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
-            await dbPut(PHOTO_STORE, { photo_id: photoId, blob: processed.blob, created_at: isoNow() });
-            state.previewUrls[photoId] = URL.createObjectURL(processed.blob);
-            data[field].push({
-              photo_id: photoId,
-              original_name: file.name || processed.file_name,
-              file_name: processed.file_name,
-              size: processed.blob.size,
-              original_size: file.size || processed.blob.size,
-              compressed: processed.compressed,
-              type: "image/jpeg"
-            });
-          } catch (err) {
-            failures += 1;
-            showToast(err.message || "照片处理失败，请重新选择。");
+        state.isPhotoProcessing = true;
+        try {
+          for (const file of files) {
+            try {
+              const processed = await preprocessImage(file);
+              const photoId = "photo_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+              await dbPut(PHOTO_STORE, { photo_id: photoId, blob: processed.blob, created_at: isoNow() });
+              state.previewUrls[photoId] = URL.createObjectURL(processed.blob);
+              data[field].push({
+                photo_id: photoId,
+                original_name: file.name || processed.file_name,
+                file_name: processed.file_name,
+                size: processed.blob.size,
+                original_size: file.size || processed.blob.size,
+                compressed: processed.compressed,
+                type: "image/jpeg"
+              });
+            } catch (err) {
+              failures += 1;
+              showToast(err.message || "照片处理失败，请重新选择。");
+            }
           }
+        } finally {
+          state.isPhotoProcessing = false;
         }
         await saveNow();
         state.photoMessages[messageKey] = failures ? "部分照片处理失败，请重新选择" : "照片已保存到本机";
-        renderItems();
+        allowAutoErrorAdvance();
         updateStatsAndErrors(false);
+        refreshItemCard(itemId);
       }
 
       async function deletePhoto(itemId, field, photoId) {
@@ -1293,8 +1700,287 @@
         await dbDelete(PHOTO_STORE, photoId);
         await saveNow();
         state.photoMessages[itemId + "::" + field] = "照片已删除";
-        renderItems();
+        allowAutoErrorAdvance();
         updateStatsAndErrors(false);
+        refreshItemCard(itemId);
+      }
+
+      async function importRtsReturnZip(file) {
+        if (!file) return;
+        await importZipPackage(file);
+      }
+
+      async function importZipPackage(file) {
+        state.isImporting = true;
+        try {
+          if (!/\.zip$/i.test(file.name || "")) throw new Error("请选择 ZIP 文件。");
+          if (file.size > config.zipMaxBytes) throw new Error("ZIP 超过 500MB 上限，无法导入。");
+          setSaveStatus("正在读取 ZIP", "saving");
+          const archive = await openZipArchive(file);
+          const rtsData = await readZipJson(archive, "rts_review_data.json", "RTS/GTS 返回报告");
+          const sourceData = rtsData.source_data || {};
+          if (!sourceData.base_info || !Array.isArray(sourceData.groups)) throw new Error("RTS/GTS 返回 ZIP 缺少原始一线报告数据。");
+          const sourceIssueNo = sourceData.issue_no || rtsData.source_issue_no || "";
+          const review = buildImportedRtsReview(rtsData, sourceIssueNo, (state.report || {}).rts_review);
+          const canMerge = state.report && sourceIssueNo && [state.report.source_issue_no, state.report.last_issue_no].includes(sourceIssueNo);
+          if (canMerge) {
+            state.report.source_issue_no = sourceIssueNo;
+            state.report.rts_review = review;
+            state.lastValidationPassed = false;
+            await activateImportedReport(state.report, "已导入 RTS/GTS 返回 ZIP，补充要求已标记到对应步骤。", pendingSupplementRequests()[0] && pendingSupplementRequests()[0].item_id);
+            return;
+          }
+          const report = await createImportedReport(sourceData, archive);
+          report.rts_review = review;
+          await activateImportedReport(report, "已导入 RTS/GTS 返回 ZIP，并新建本机报告用于补充。", pendingSupplementRequests(report)[0] && pendingSupplementRequests(report)[0].item_id);
+        } catch (err) {
+          console.error(err);
+          setSaveStatus("导入失败", "error");
+          showToast("导入失败：" + (err && err.message ? err.message : "请确认选择的是本工具导出的 ZIP。"));
+        } finally {
+          state.isImporting = false;
+          state.allowAutoErrorAdvance = false;
+          state.manualRecheckRequired = false;
+        }
+      }
+
+      function buildImportedRtsReview(rtsData, sourceIssueNo, previousReview) {
+        const previous = {};
+        ((previousReview || {}).supplement_requests || []).forEach(function (request) {
+          previous[(request.item_id || "") + "::" + (request.requirement || "")] = request;
+        });
+        const requests = normalizeImportedSupplementRequests(rtsData.supplement_requests || []).map(function (request) {
+          const key = (request.item_id || "") + "::" + (request.requirement || "");
+          const old = previous[key];
+          if (old && old.fulfilled) {
+            request.fulfilled = true;
+            request.fulfilled_at = old.fulfilled_at || "";
+          }
+          return request;
+        });
+        return {
+          review_no: String(rtsData.review_no || ""),
+          source_issue_no: sourceIssueNo,
+          review: rtsData.review || {},
+          review_tags: rtsData.review_tags || {},
+          generated_at: rtsData.generated_at || "",
+          supplement_requests: requests
+        };
+      }
+
+      function normalizeImportedSupplementRequests(requests) {
+        return (Array.isArray(requests) ? requests : []).filter(function (request) {
+          return request && request.item_id;
+        }).map(function (request) {
+          return {
+            item_id: String(request.item_id),
+            display_step: String(request.display_step || ""),
+            action: String(request.action || ""),
+            need_record: !!request.need_record,
+            need_before: !!request.need_before,
+            need_after: !!request.need_after,
+            requirement: String(request.requirement || ""),
+            fulfilled: request.fulfilled === true,
+            fulfilled_at: String(request.fulfilled_at || "")
+          };
+        });
+      }
+
+      async function createImportedReport(sourceData, archive) {
+        if (!sourceData || !sourceData.base_info || !Array.isArray(sourceData.groups)) throw new Error("ZIP 中未找到可编辑的一线报告数据。");
+        const report = blankReport();
+        const sourceIssueNo = String(sourceData.issue_no || (sourceData.base_info || {}).issue_no || "");
+        report.base_info = Object.assign({}, report.base_info, sourceData.base_info || {});
+        report.source_issue_no = sourceIssueNo;
+        report.last_issue_no = sourceIssueNo;
+        const sourceItems = {};
+        (sourceData.groups || []).forEach(function (group) {
+          (group.items || []).forEach(function (item) {
+            if (item && item.id) sourceItems[item.id] = item;
+          });
+        });
+        const createdPhotoIds = [];
+        try {
+          for (const item of config.templateItems) {
+            const sourceItem = sourceItems[item.id];
+            if (!sourceItem) continue;
+            const target = report.item_data[item.id];
+            target.measured_value = String(sourceItem.measured_value || "");
+            target.conclusion = normalizeImportedConclusion(sourceItem);
+            for (const field of ["before_images", "after_images"]) {
+              target[field] = await importPackagedImages(sourceItem[field] || [], archive, createdPhotoIds, item.id, field);
+            }
+          }
+        } catch (err) {
+          await Promise.all(createdPhotoIds.map(function (photoId) { return dbDelete(PHOTO_STORE, photoId); }));
+          throw err;
+        }
+        return report;
+      }
+
+      function normalizeImportedConclusion(item) {
+        const direct = normalizeConclusion(item && item.conclusion);
+        if (["正常", "异常", "已处理", "待确认"].includes(item && item.conclusion)) return direct;
+        const byClass = { normal: "正常", abnormal: "异常", handled: "已处理", pending: "待确认" };
+        return byClass[String((item || {}).conclusion_class || "")] || direct;
+      }
+
+      async function importPackagedImages(images, archive, createdPhotoIds, itemId, field) {
+        if (!Array.isArray(images)) return [];
+        if (images.length > config.maxImagesPerField) throw new Error(itemId + " 的" + FIELD_LABELS[field] + "超过 " + config.maxImagesPerField + " 张，无法安全导入。");
+        const imported = [];
+        for (let index = 0; index < images.length; index += 1) {
+          const image = images[index] || {};
+          if (!image.path) throw new Error(itemId + " 有照片缺少 ZIP 路径。");
+          setSaveStatus("正在恢复照片 " + (index + 1) + "/" + images.length, "saving");
+          const bytes = await archive.read(image.path);
+          const originalName = String(image.original_name || image.path.split("/").pop() || "photo.jpg");
+          const photoId = "photo_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+          const blob = new Blob([bytes], { type: imageMimeType(originalName) });
+          await dbPut(PHOTO_STORE, { photo_id: photoId, blob: blob, created_at: isoNow() });
+          createdPhotoIds.push(photoId);
+          imported.push({
+            photo_id: photoId,
+            original_name: originalName,
+            file_name: originalName,
+            size: blob.size,
+            original_size: Number(image.original_size || image.size || blob.size),
+            compressed: image.compressed !== false,
+            type: blob.type
+          });
+        }
+        return imported;
+      }
+
+      async function activateImportedReport(report, message, focusItemId) {
+        state.report = report;
+        state.draftId = report.draft_id;
+        state.errorMode = false;
+        state.lastErrors = [];
+        state.currentErrorKey = "";
+        ensureReportShape();
+        await saveNow();
+        await hydratePreviews();
+        restoreUi();
+        if (focusItemId) {
+          state.filter = "all";
+          state.ui.expandedItemId = focusItemId;
+          state.ui.referenceOpen[focusItemId] = true;
+          persistUi();
+        }
+        renderAll();
+        closeReportDrawer();
+        setSaveStatus("已导入并保存 " + timeText());
+        showToast(message);
+        if (focusItemId) {
+          window.setTimeout(function () {
+            const node = document.querySelector("[data-item-id='" + cssEscape(focusItemId) + "']");
+            if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 80);
+        }
+      }
+
+      async function openZipArchive(file) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        if (bytes.length < 22) throw new Error("ZIP 文件不完整。");
+        const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+        let endOffset = -1;
+        const start = Math.max(0, bytes.length - 65557);
+        for (let offset = bytes.length - 22; offset >= start; offset -= 1) {
+          if (readZip32(view, offset) === 0x06054b50) { endOffset = offset; break; }
+        }
+        if (endOffset < 0) throw new Error("未识别到 ZIP 目录，请确认文件未损坏。");
+        const entryCount = readZip16(view, endOffset + 10);
+        const centralSize = readZip32(view, endOffset + 12);
+        const centralOffset = readZip32(view, endOffset + 16);
+        if (entryCount === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff) throw new Error("暂不支持 ZIP64 文件，请在电脑端重新导出普通 ZIP。");
+        if (!entryCount || entryCount > 2000 || centralOffset + centralSize > bytes.length) throw new Error("ZIP 目录异常，无法安全导入。");
+        const entries = new Map();
+        let cursor = centralOffset;
+        for (let index = 0; index < entryCount; index += 1) {
+          if (readZip32(view, cursor) !== 0x02014b50) throw new Error("ZIP 条目损坏，无法导入。");
+          const flags = readZip16(view, cursor + 8);
+          const method = readZip16(view, cursor + 10);
+          const compressedSize = readZip32(view, cursor + 20);
+          const uncompressedSize = readZip32(view, cursor + 24);
+          const nameLength = readZip16(view, cursor + 28);
+          const extraLength = readZip16(view, cursor + 30);
+          const commentLength = readZip16(view, cursor + 32);
+          const localOffset = readZip32(view, cursor + 42);
+          const nameStart = cursor + 46;
+          const next = nameStart + nameLength + extraLength + commentLength;
+          if (next > bytes.length || localOffset >= bytes.length) throw new Error("ZIP 条目越界，无法导入。");
+          const name = decodeZipName(bytes.slice(nameStart, nameStart + nameLength), flags).replace(/\\/g, "/");
+          if (name && !name.endsWith("/")) {
+            if (name.startsWith("/") || name.split("/").includes("..")) throw new Error("ZIP 包含不安全的文件路径。");
+            if (flags & 1) throw new Error("不支持加密 ZIP，请导出未加密的报告包。");
+            entries.set(name, { name: name, method: method, compressed_size: compressedSize, uncompressed_size: uncompressedSize, local_offset: localOffset });
+          }
+          cursor = next;
+        }
+        return {
+          async read(name) {
+            const entry = entries.get(String(name || "").replace(/\\/g, "/"));
+            if (!entry) throw new Error("ZIP 中缺少 " + name + "。");
+            if (readZip32(view, entry.local_offset) !== 0x04034b50) throw new Error("ZIP 本地文件头损坏：" + name);
+            const localNameLength = readZip16(view, entry.local_offset + 26);
+            const localExtraLength = readZip16(view, entry.local_offset + 28);
+            const dataStart = entry.local_offset + 30 + localNameLength + localExtraLength;
+            const dataEnd = dataStart + entry.compressed_size;
+            if (dataEnd > bytes.length) throw new Error("ZIP 中的 " + name + " 不完整。");
+            const compressed = bytes.slice(dataStart, dataEnd);
+            let output;
+            if (entry.method === 0) output = compressed;
+            else if (entry.method === 8) output = await inflateZipData(compressed);
+            else throw new Error("ZIP 中的 " + name + " 使用了不支持的压缩方式。");
+            if (output.length !== entry.uncompressed_size) throw new Error("ZIP 中的 " + name + " 解压校验失败。");
+            return output;
+          }
+        };
+      }
+
+      function readZip16(view, offset) {
+        if (offset + 2 > view.byteLength) throw new Error("ZIP 数据不完整。");
+        return view.getUint16(offset, true);
+      }
+
+      function readZip32(view, offset) {
+        if (offset + 4 > view.byteLength) throw new Error("ZIP 数据不完整。");
+        return view.getUint32(offset, true);
+      }
+
+      function decodeZipName(bytes, flags) {
+        try { return new TextDecoder(flags & 0x0800 ? "utf-8" : "gb18030").decode(bytes); }
+        catch (err) { return new TextDecoder("utf-8").decode(bytes); }
+      }
+
+      async function inflateZipData(bytes) {
+        if (typeof DecompressionStream === "undefined") {
+          throw new Error("当前浏览器不支持解压电脑端 ZIP，请使用 Chrome、Edge 或较新的 Safari 打开本 HTML。");
+        }
+        try {
+          const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+          return new Uint8Array(await new Response(stream).arrayBuffer());
+        } catch (err) {
+          throw new Error("ZIP 解压失败，请确认文件完整，并使用 Chrome、Edge 或较新的 Safari 打开。");
+        }
+      }
+
+      async function readZipJson(archive, name, label) {
+        let parsed;
+        try {
+          parsed = JSON.parse(new TextDecoder("utf-8").decode(await archive.read(name)));
+        } catch (err) {
+          throw new Error((label || name) + " 数据无法读取。");
+        }
+        return parsed;
+      }
+
+      function imageMimeType(name) {
+        const lower = String(name || "").toLowerCase();
+        if (/\.png$/.test(lower)) return "image/png";
+        if (/\.webp$/.test(lower)) return "image/webp";
+        return "image/jpeg";
       }
 
       function loadImageFromFile(file) {
@@ -1352,8 +2038,8 @@
         config.templateItems.forEach(function (item) {
           const data = report.item_data[item.id] || {};
           photoCount += (data.before_images || []).length + (data.after_images || []).length;
-          conclusion[data.conclusion || "正常"] = (conclusion[data.conclusion || "正常"] || 0) + 1;
-          if (isItemDone(item, data)) completed += 1;
+          conclusion[normalizeConclusion(data.conclusion)] += 1;
+          if (isItemDone(item, data, report)) completed += 1;
         });
         return {
           total_items: config.templateItems.length,
@@ -1371,7 +2057,8 @@
         };
       }
 
-      function isItemDone(item, data) {
+      function isItemDone(item, data, report) {
+        if (hasPendingSupplement(item.id, report)) return false;
         if (item.record_required && String(data.measured_value || "").trim().length < 2) return false;
         if (item.before_required && !(data.before_images || []).length) return false;
         if (item.after_required && !(data.after_images || []).length) return false;
@@ -1405,23 +2092,42 @@
             }
           });
         });
+        pendingSupplementRequests(report).forEach(function (request) {
+          const item = config.templateItems.find(function (entry) { return entry.id === request.item_id; });
+          const step = item ? (item.display_step || item.step) : (request.display_step || request.item_id || "未知步骤");
+          errors.push({ item_id: request.item_id, field: "rts_supplement", message: step + "：RTS/GTS 要求补充资料，请完成后确认。" });
+        });
         return errors;
+      }
+
+      function errorKey(error) {
+        return String((error && error.item_id) || "base") + "::" + String((error && error.field) || "");
+      }
+
+      function allowAutoErrorAdvance(requiresManualRecheck) {
+        state.allowAutoErrorAdvance = true;
+        state.manualRecheckRequired = Boolean(requiresManualRecheck);
       }
 
       async function checkCompleteness() {
         await saveNow();
         const errors = validateReport(state.report);
-        state.filter = errors.length ? "todo" : "all";
-        document.querySelectorAll("[data-filter]").forEach(function (button) {
-          button.classList.toggle("active", button.dataset.filter === state.filter);
-        });
+        state.allowAutoErrorAdvance = false;
+        state.manualRecheckRequired = false;
         state.errorMode = true;
         state.errorIndex = 0;
+        state.currentErrorKey = errors[0] ? errorKey(errors[0]) : "";
         state.lastValidationPassed = !errors.length;
         state.lastErrors = errors;
+        setFilter(errors.length ? "todo" : "all", false, true);
+        if (errors[0] && !errors[0].item_id) {
+          state.ui.baseCollapsed = false;
+          persistUi();
+          renderBaseSummary();
+        }
         if (errors[0] && errors[0].item_id) setExpandedItem(errors[0].item_id, true);
+        else renderItems();
         updateStatsAndErrors(true);
-        renderItems();
         if (!errors.length) {
           showToast("完整性检查通过，可以导出正式 ZIP。");
           return true;
@@ -1433,14 +2139,21 @@
 
       function focusErrorTarget(error) {
         if (!error) return;
+        state.currentErrorKey = errorKey(error);
         if (error.item_id && state.ui.expandedItemId !== error.item_id) {
           setExpandedItem(error.item_id, true);
         }
         let target = null;
         if (!error.item_id) {
+          state.ui.baseCollapsed = false;
+          persistUi();
+          renderBaseSummary();
           target = document.querySelector("[name='" + error.field + "']");
+          if (target) target.classList.add("has-error");
         } else if (error.field === "measured_value") {
           target = document.querySelector("textarea[data-record='" + error.item_id + "']");
+        } else if (error.field === "rts_supplement") {
+          target = document.querySelector("button[data-complete-supplement='" + error.item_id + "']");
         } else {
           target = document.querySelector("button[data-trigger='" + error.item_id + "_" + error.field + "_camera']");
         }
@@ -1455,7 +2168,32 @@
       function updateStatsAndErrors(showErrors) {
         const stats = computeStats(state.report);
         const errors = validateReport(state.report);
-        if (showErrors || state.errorMode) state.lastErrors = errors;
+        const canAutoAdvance = state.allowAutoErrorAdvance && state.errorMode && !state.isPhotoProcessing && !state.isImporting;
+        let nextErrorToFocus = null;
+        let completionMessage = "";
+        if (showErrors || state.errorMode) {
+          const previousKey = state.currentErrorKey;
+          state.lastErrors = errors;
+          if (errors.length) {
+            const existingIndex = previousKey ? errors.findIndex(function (error) { return errorKey(error) === previousKey; }) : -1;
+            if (existingIndex >= 0) {
+              state.errorIndex = existingIndex;
+            } else {
+              state.errorIndex = Math.min(Math.max(state.errorIndex, 0), errors.length - 1);
+              if (canAutoAdvance && previousKey) nextErrorToFocus = errors[state.errorIndex];
+            }
+            state.currentErrorKey = errorKey(errors[state.errorIndex]);
+          } else {
+            state.errorIndex = 0;
+            state.currentErrorKey = "";
+            if (canAutoAdvance && previousKey && !state.manualRecheckRequired) {
+              state.lastValidationPassed = true;
+              completionMessage = "完整性检查通过，可以导出正式 ZIP。";
+            }
+          }
+        }
+        state.allowAutoErrorAdvance = false;
+        state.manualRecheckRequired = false;
         document.getElementById("statTotal").textContent = stats.total_items;
         document.getElementById("statDone").textContent = stats.completed_items;
         document.getElementById("statTodo").textContent = stats.uncompleted_items;
@@ -1487,6 +2225,11 @@
           attention: stats.attention_count
         };
         Object.keys(filterCounts).forEach(function (key) { const node = document.getElementById("filterCount" + key.charAt(0).toUpperCase() + key.slice(1)); if (node) node.textContent = filterCounts[key]; });
+        const baseErrorFields = new Set(errors.filter(function (error) { return !error.item_id; }).map(function (error) { return error.field; }));
+        config.basicFields.forEach(function (field) {
+          const fieldNode = document.querySelector("[name='" + field.key + "']");
+          if (fieldNode) fieldNode.classList.toggle("has-error", state.errorMode && baseErrorFields.has(field.key));
+        });
         const bottomText = document.getElementById("bottomProgressText");
         const bottomDetail = document.getElementById("bottomProgressDetail");
         const bottomNext = document.getElementById("bottomNextBtn");
@@ -1495,11 +2238,14 @@
         const exportReady = state.lastValidationPassed && !errors.length;
         bottomNext.textContent = exportReady ? "导出正式 ZIP" : "下一待办";
         bottomNext.classList.toggle("primary", true);
+        const errorPosition = document.getElementById("errorPosition");
+        if (errorPosition) errorPosition.textContent = errors.length ? "当前第 " + (state.errorIndex + 1) + " 处 / 共 " + errors.length + " 处" : "完整性检查通过";
         if (state.errorMode && errors.length) {
           document.getElementById("errorList").innerHTML = renderErrorGroups(errors);
           document.querySelectorAll("[data-focus-error]").forEach(function (button) {
             button.addEventListener("click", function () {
               state.errorIndex = Number(button.dataset.focusError) || 0;
+              state.currentErrorKey = errorKey(errors[state.errorIndex]);
               focusErrorTarget(errors[state.errorIndex]);
             });
           });
@@ -1507,6 +2253,10 @@
         } else {
           errorPanel.classList.add("hidden");
         }
+        if (nextErrorToFocus) {
+          window.setTimeout(function () { focusErrorTarget(nextErrorToFocus); }, 80);
+        }
+        if (completionMessage) showToast(completionMessage);
       }
 
       async function exportZip(status) {
@@ -1517,11 +2267,11 @@
           state.lastValidationPassed = false;
           state.errorIndex = 0;
           state.lastErrors = errors;
-          state.filter = "todo";
-          document.querySelectorAll("[data-filter]").forEach(function (button) { button.classList.toggle("active", button.dataset.filter === "todo"); });
+          state.currentErrorKey = errors[0] ? errorKey(errors[0]) : "";
+          setFilter("todo", false, true);
           if (errors[0] && errors[0].item_id) setExpandedItem(errors[0].item_id, true);
+          else renderItems();
           updateStatsAndErrors(true);
-          renderItems();
           showToast("正式 ZIP 未通过完整性检查，已跳到第一处待补内容。");
           window.setTimeout(function () { focusErrorTarget(errors[0]); }, 80);
           return;
@@ -1558,7 +2308,7 @@
         const files = (packageData && packageData.files) || [];
         const byName = {};
         files.forEach(function (file) { byName[file.name] = file; });
-        for (const name of ["manifest.json", "report_data.json", "report.html"]) {
+        for (const name of ["manifest.json", "report_data.json", "report.html", "报告包说明.txt"]) {
           if (!byName[name]) return { ok: false, message: "缺少 " + name };
         }
         try {
@@ -1567,8 +2317,14 @@
           if (manifest.format_version !== config.packageFormatVersion || reportData.format_version !== config.packageFormatVersion) {
             return { ok: false, message: "报告包版本不兼容" };
           }
+          if (manifest.tool_version !== config.version || reportData.tool_version !== config.version) {
+            return { ok: false, message: "报告包工具版本不一致" };
+          }
           if (manifest.report_status !== status || reportData.report_status !== status) {
             return { ok: false, message: "报告状态不一致" };
+          }
+          if (!String(byName["报告包说明.txt"].data || "").includes(config.packageFormatVersion)) {
+            return { ok: false, message: "报告包说明文件格式版本异常" };
           }
           if (!reportData.base_info || !Array.isArray(reportData.groups) || !reportData.groups.length) {
             return { ok: false, message: "缺少电脑端导入所需的报告数据" };
@@ -1593,6 +2349,37 @@
         }
       }
 
+      function buildPackageReadme() {
+        return [
+          "免疫跳值排查反馈报告包说明",
+          "",
+          "一、文件用途",
+          "",
+          "1. report.html",
+          "   可直接使用电脑浏览器打开查看完整排查报告。",
+          "",
+          "2. report_data.json",
+          "   供电脑端 RTS/GTS 审核工具读取的结构化报告数据。",
+          "",
+          "3. manifest.json",
+          "   记录报告包格式版本、工具版本、报告状态和基础信息。",
+          "",
+          "4. images/",
+          "   存放一线工程师上传的原始状态照片及调试或维护后照片。",
+          "",
+          "二、注意事项",
+          "",
+          "1. 请勿单独删除、移动或修改 ZIP 内文件。",
+          "2. 请勿修改 images 文件夹中的照片文件名。",
+          "3. 修改文件可能导致电脑端审核工具无法导入。",
+          "4. 一线工程师应发送完整 ZIP，不要只发送 report.html。",
+          "5. RTS/GTS 返回补充报告后，请在本工具中选择“导入 RTS/GTS 返回 ZIP”继续填写。",
+          "",
+          "当前报告包格式：" + config.packageFormatVersion,
+          "当前工具版本：" + config.version
+        ].join("\r\n");
+      }
+
       async function buildPackageData(status, issueNo, errors) {
         const generatedAt = isoNow();
         const reportData = await buildReportData(status, issueNo, generatedAt, errors);
@@ -1614,10 +2401,12 @@
           stats: reportData.stats
         };
         const reportHtml = buildReportHtml(reportData, manifest);
+        const packageReadme = buildPackageReadme();
         const files = [
           { name: "manifest.json", data: JSON.stringify(manifest, null, 2), size: utf8Size(JSON.stringify(manifest)) },
           { name: "report_data.json", data: JSON.stringify(reportData, null, 2), size: utf8Size(JSON.stringify(reportData)) },
-          { name: "report.html", data: reportHtml, size: utf8Size(reportHtml) }
+          { name: "report.html", data: reportHtml, size: utf8Size(reportHtml) },
+          { name: "报告包说明.txt", data: packageReadme, size: utf8Size(packageReadme) }
         ];
         reportData._imageFiles.forEach(function (file) { files.push(file); });
         delete reportData._imageFiles;
@@ -1636,8 +2425,8 @@
           const data = itemData(item.id);
           const reportItem = Object.assign({}, item, {
             measured_value: data.measured_value || "",
-            conclusion: data.conclusion || "正常",
-            conclusion_class: conclusionClass(data.conclusion || "正常"),
+            conclusion: normalizeConclusion(data.conclusion),
+            conclusion_class: conclusionClass(normalizeConclusion(data.conclusion)),
             short_description_warning: isShortDescription(data.measured_value || ""),
             before_images: [],
             after_images: []
@@ -1670,9 +2459,12 @@
         });
         return {
           format_version: config.packageFormatVersion,
+          tool_version: config.version,
           report_status: status,
           base_info: Object.assign({}, state.report.base_info, { issue_no: issueNo }),
           issue_no: issueNo,
+          source_issue_no: state.report.source_issue_no || "",
+          rts_review: state.report.rts_review || null,
           stats: stats,
           warnings: [],
           errors: status === "draft" ? errors : [],
@@ -1719,7 +2511,7 @@
         return '<article class="record" data-conclusion="' + escapeHtml(item.conclusion) + '"><div class="record-head"><div class="record-title-row"><div><h3>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(item.action) + '</h3><div class="subline">分类：' + escapeHtml(item.category) + '｜是否执行：是</div></div><span class="conclusion-pill conclusion-' + escapeHtml(item.conclusion_class) + '">' + escapeHtml(item.conclusion) + '</span></div></div><div class="record-body">' +
           '<div class="detail-box"><span class="detail-label">排查动作</span><p>' + escapeHtml(item.action) + '</p></div>' +
           '<div class="detail-box"><span class="detail-label">合格指标</span><p>' + escapeHtml(item.standard) + '</p></div>' +
-          '<div class="detail-box"><span class="detail-label">实测情况记录</span><p>' + escapeHtml(item.measured_value || "未填写") + '</p>' + (item.short_description_warning ? '<div class="short-note">提示：该描述较简略，建议 RTS 审核时关注是否需要补充实测值或处理结果。</div>' : '') + '</div>' +
+          '<div class="detail-box"><span class="detail-label">实测情况记录</span><p>' + escapeHtml(item.measured_value || "未填写") + '</p>' + (item.short_description_warning ? '<div class="short-note">提示：该描述较简略，建议 RTS/GTS 审核时关注是否需要补充实测值或处理结果。</div>' : '') + '</div>' +
           '<div class="photo-row">' + renderReportPhotos(item.before_images, "原始状态照片") + renderReportPhotos(item.after_images, "调试或维护后照片") + '</div></div></article>';
       }
 
@@ -1869,7 +2661,12 @@
         return String(value || "未命名").replace(/[<>:"/\\|?*\r\n\t]+/g, "_").replace(/\s+/g, "_").replace(/^\.+|\.+$/g, "").slice(0, 120) || "未命名";
       }
 
+      function normalizeConclusion(value) {
+        return ["正常", "异常", "已处理", "待确认"].includes(value) ? value : "正常";
+      }
+
       function conclusionClass(value) {
+        value = normalizeConclusion(value);
         if (value === "异常") return "abnormal";
         if (value === "已处理") return "handled";
         if (value === "待确认") return "pending";

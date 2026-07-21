@@ -161,10 +161,6 @@
   function initToolbar() {
     document.getElementById("saveDraftBtn").addEventListener("click", saveDraft);
     document.getElementById("loadDraftBtn").addEventListener("click", loadSelectedDraft);
-    document.getElementById("importReportBtn").addEventListener("click", function () {
-      document.getElementById("importReportInput").click();
-    });
-    document.getElementById("importReportInput").addEventListener("change", importOriginalReportZip);
     document.getElementById("importRtsReviewBtn").addEventListener("click", function () {
       document.getElementById("importRtsReviewInput").click();
     });
@@ -380,7 +376,7 @@
       renderConclusionOption(data.conclusion, "已处理"),
       renderConclusionOption(data.conclusion, "待确认"),
       '</select></label>',
-      '<div class="conclusion-tip">异常、已处理、待确认会在报告顶部自动汇总，便于 RTS 快速审核。</div>',
+      '<div class="conclusion-tip">异常、已处理、待确认会在报告顶部自动汇总，便于 RTS/GTS 快速审核。</div>',
       '</div>',
       '<label class="item-field' + (recordError ? " has-error" : "") + '">',
       '<span class="textarea-label">实测情况记录（' + (item.record_required ? "必填" : "选填") + '）</span>',
@@ -398,7 +394,7 @@
 
   function renderSupplementBadge(supplement) {
     if (!supplement) return "";
-    return '<span class="tag rts-required">RTS需补充</span>';
+    return '<span class="tag rts-required">RTS/GTS需补充</span>';
   }
 
   function supplementTypeText(request) {
@@ -413,8 +409,8 @@
     if (!supplement) return "";
     return [
       '<div class="supplement-box">',
-      '<div><strong>RTS补充要求</strong><span>' + escapeHtml(supplementTypeText(supplement)) + '</span></div>',
-      '<p>' + escapeHtml(supplement.requirement || "请按 RTS 意见补充该项资料。") + '</p>',
+      '<div><strong>RTS/GTS补充要求</strong><span>' + escapeHtml(supplementTypeText(supplement)) + '</span></div>',
+      '<p>' + escapeHtml(supplement.requirement || "请按 RTS/GTS 意见补充该项资料。") + '</p>',
       '</div>'
     ].join("");
   }
@@ -978,8 +974,8 @@
       renderItems();
       updateStats();
       const warningText = (data.warnings || []).length ? "，有 " + data.warnings.length + " 张图片未能恢复，请检查提示或重新上传" : "";
-      showResult("原 ZIP 已恢复为可编辑报告，可按 RTS 意见补充后重新生成 ZIP" + warningText + "。", false);
-      finishBusy("success", "原ZIP导入成功", "已恢复为可编辑报告，可按 RTS 意见补充后重新生成 ZIP" + warningText + "。");
+      showResult("原 ZIP 已恢复为可编辑报告，可按 RTS/GTS 意见补充后重新生成 ZIP" + warningText + "。", false);
+      finishBusy("success", "原ZIP导入成功", "已恢复为可编辑报告，可按 RTS/GTS 意见补充后重新生成 ZIP" + warningText + "。");
     } catch (err) {
       const message = errorMessage(err, "原 ZIP 导入失败，请确认上传的是本工具生成的一线报告 ZIP。");
       showResult(message, true);
@@ -1007,9 +1003,9 @@
     panel.classList.remove("hidden");
 
     const count = state.supplementRequests.length;
-    summary.textContent = "RTS审核编号：" + (meta.review_no || "-") + "｜一线问题编号：" + (meta.source_issue_no || "-") + "｜需补充 " + count + " 项";
+    summary.textContent = "RTS/GTS审核编号：" + (meta.review_no || "-") + "｜一线问题编号：" + (meta.source_issue_no || "-") + "｜需补充 " + count + " 项";
     if (!count) {
-      list.innerHTML = '<div class="empty-state">该 RTS 返回 ZIP 未包含结构化补充清单，请查看 RTS HTML 报告中的文字说明。</div>';
+      list.innerHTML = '<div class="empty-state">该 RTS/GTS 返回 ZIP 未包含结构化补充清单，请查看 RTS/GTS HTML 报告中的文字说明。</div>';
       return;
     }
 
@@ -1018,7 +1014,7 @@
         '<button type="button" class="supplement-list-item" data-item-id="' + escapeHtml(request.item_id) + '">',
         '<strong>' + (index + 1) + ". " + escapeHtml(request.display_step || request.item_id) + '｜' + escapeHtml(request.action || "") + '</strong>',
         '<span>' + escapeHtml(supplementTypeText(request)) + '</span>',
-        '<small>' + escapeHtml(request.requirement || "请按 RTS 意见补充该项资料。") + '</small>',
+        '<small>' + escapeHtml(request.requirement || "请按 RTS/GTS 意见补充该项资料。") + '</small>',
         '</button>'
       ].join("");
     }).join("");
@@ -1044,9 +1040,10 @@
 
     const formData = new FormData();
     formData.append("rts_file", file);
-    if (!startBusy("正在导入RTS返回ZIP", "正在读取 RTS 补充清单，请稍候。")) return;
+    if (!startBusy("正在导入RTS/GTS返回ZIP", "正在读取 RTS/GTS 补充清单，请稍候。")) return;
     try {
       const data = await fetchJson("/api/report/import-rts-review", { method: "POST", body: formData });
+      const warningText = restoreEditableReport(data);
       state.supplementRequests = data.supplement_requests || [];
       rebuildSupplementMap();
       state.supplementOnly = Boolean(state.supplementRequests.length);
@@ -1054,23 +1051,43 @@
       renderItems();
       updateStats();
       if (state.supplementRequests.length) {
-        showResult("RTS 补充清单已导入，当前已切换为只看补充项。补完后点击“检查补充项”，再重新生成 ZIP 发回 RTS。", false);
-        finishBusy("success", "RTS返回ZIP导入成功", "已读取 " + state.supplementRequests.length + " 个补充要求，当前已切换为只看补充项。");
+        showResult("RTS/GTS 返回 ZIP 已恢复原报告和照片，当前已切换为只看补充项。补完后点击“检查补充项”，再重新生成 ZIP 发回 RTS/GTS" + warningText + "。", false);
+        finishBusy("success", "RTS/GTS返回ZIP导入成功", "已恢复可编辑报告，读取 " + state.supplementRequests.length + " 个补充要求，当前已切换为只看补充项" + warningText + "。");
       } else {
-        showResult("RTS 返回 ZIP 已导入，但没有结构化补充清单，请查看 RTS 报告文字说明。", true);
-        finishBusy("error", "RTS返回ZIP已导入", "文件已读取，但没有结构化补充清单，请查看 RTS 报告文字说明。");
+        showResult("RTS/GTS 返回 ZIP 已恢复原报告和照片，但没有结构化补充清单，请查看 RTS/GTS 报告文字说明" + warningText + "。", true);
+        finishBusy("error", "RTS/GTS返回ZIP已导入", "已恢复可编辑报告，但没有结构化补充清单，请查看 RTS/GTS 报告文字说明" + warningText + "。");
       }
     } catch (err) {
-      const message = errorMessage(err, "RTS 返回 ZIP 导入失败，请确认上传的是本工具生成的 RTS 审核返回 ZIP。");
+      const message = errorMessage(err, "RTS/GTS 返回 ZIP 导入失败，请确认上传的是本工具生成的 RTS/GTS 审核返回 ZIP。");
       showResult(message, true);
-      finishBusy("error", "RTS返回ZIP导入失败", message);
+      finishBusy("error", "RTS/GTS返回ZIP导入失败", message);
     }
+  }
+
+  function restoreEditableReport(data) {
+    state.sessionId = data.session_id || makeId();
+    localStorage.setItem("jumpCheckSessionId", state.sessionId);
+    setBaseInfo(data.base_info || {});
+    state.itemData = {};
+    (data.items || []).forEach(function (item) {
+      if (!item || !item.id) return;
+      state.itemData[item.id] = {
+        id: item.id,
+        measured_value: item.measured_value || "",
+        conclusion: item.conclusion || "正常",
+        before_images: item.before_images || [],
+        after_images: item.after_images || []
+      };
+    });
+    state.items.forEach(function (item) { ensureItemData(item.id); });
+    const warningCount = (data.warnings || []).length;
+    return warningCount ? "；有 " + warningCount + " 张图片未能恢复，请检查提示或重新上传" : "";
   }
 
   function checkSupplementCompletion() {
     clearResult();
     if (!state.supplementRequests.length) {
-      showResult("请先导入 RTS 返回 ZIP。", true);
+      showResult("请先导入 RTS/GTS 返回 ZIP。", true);
       return;
     }
 
@@ -1085,21 +1102,21 @@
       }
       const data = ensureItemData(request.item_id);
       if (request.need_record && (data.measured_value || "").trim().length < 2) {
-        errors.push({ item_id: request.item_id, field: "measured_value", message: label + "，RTS要求补充实测情况记录。" });
+        errors.push({ item_id: request.item_id, field: "measured_value", message: label + "，RTS/GTS要求补充实测情况记录。" });
       }
       if (request.need_before && !(data.before_images || []).length) {
-        errors.push({ item_id: request.item_id, field: "before_images", message: label + "，RTS要求补充原始状态照片。" });
+        errors.push({ item_id: request.item_id, field: "before_images", message: label + "，RTS/GTS要求补充原始状态照片。" });
       }
       if (request.need_after && !(data.after_images || []).length) {
-        errors.push({ item_id: request.item_id, field: "after_images", message: label + "，RTS要求补充调试或维护后照片。" });
+        errors.push({ item_id: request.item_id, field: "after_images", message: label + "，RTS/GTS要求补充调试或维护后照片。" });
       }
     });
 
     renderErrors(errors);
     if (errors.length) {
-      showResult("还有 " + errors.length + " 个 RTS 补充要求未完成，已定位到第一处。", true);
+      showResult("还有 " + errors.length + " 个 RTS/GTS 补充要求未完成，已定位到第一处。", true);
     } else {
-      showResult("RTS 补充项检查通过，可以重新生成 ZIP 发回 RTS。", false);
+      showResult("RTS/GTS 补充项检查通过，可以重新生成 ZIP 发回 RTS/GTS。", false);
     }
   }
 

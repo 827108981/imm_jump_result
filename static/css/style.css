@@ -133,6 +133,18 @@ h1 {
   font-size: 13px;
   line-height: 1.6;
 }
+.must-read-notice {
+  display: block;
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.must-read-notice:focus-visible { outline: 3px solid rgba(180, 35, 24, .28); outline-offset: 3px; }
 
 .draft-select {
   height: 36px;
@@ -555,6 +567,14 @@ h1 {
   font-size: 26px;
   line-height: 1;
   letter-spacing: 0;
+}
+.stats-grid .issue-stat { grid-column: 1 / -1; min-height: auto; }
+.stats-grid .issue-stat strong {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .progress-cell {
@@ -1271,6 +1291,10 @@ h1 {
   border-color: #d89c38;
   box-shadow: inset 3px 0 0 #d89c38;
 }
+.rts-step-card.is-approved {
+  border-color: #9bc9b1;
+  box-shadow: inset 3px 0 0 var(--ok);
+}
 .rts-step-head {
   display: flex;
   align-items: flex-start;
@@ -1314,8 +1338,36 @@ h1 {
   resize: vertical;
   background: #fff;
 }
-.rts-supplement-inline {
+.rts-decision-control {
   display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+.rts-decision-control > span {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.rts-decision-control label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfa;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+.rts-decision-control label:has(input[value="approved"]:checked) { border-color: var(--ok); background: #ecfdf3; color: #075f36; }
+.rts-decision-control label:has(input[value="supplement"]:checked) { border-color: #d89c38; background: #fff7e9; color: #8a5b00; }
+.rts-supplement-inline {
+  display: none;
   grid-template-columns: minmax(220px, 260px) minmax(320px, .8fr) 1fr;
   gap: 12px;
   align-items: start;
@@ -1324,6 +1376,7 @@ h1 {
   background: #fffaf0;
   padding: 12px;
 }
+.rts-step-card.has-supplement .rts-supplement-inline { display: grid; }
 .rts-supplement-toggle {
   min-height: 36px;
   display: flex;
@@ -1349,6 +1402,7 @@ h1 {
   .rts-form,
   .check-grid,
   .rts-step-grid,
+  .rts-decision-control,
   .rts-supplement-inline,
   .supplement-request-body,
   .supplement-type-grid,

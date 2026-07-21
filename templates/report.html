@@ -171,7 +171,7 @@
                 <div class="detail-box">
                   <span class="detail-label">实测情况记录</span>
                   <p>{{ item.measured_value or "未填写" }}</p>
-                  {% if item.short_description_warning %}<div class="short-note">提示：该描述较简略，建议 RTS 审核时关注是否需要补充实测值或处理结果。</div>{% endif %}
+                  {% if item.short_description_warning %}<div class="short-note">提示：该描述较简略，建议 RTS/GTS 审核时关注是否需要补充实测值或处理结果。</div>{% endif %}
                 </div>
                 <div class="photo-row">
                   <div class="photo-box">
@@ -203,7 +203,7 @@
     {% endfor %}
 
     <section>
-      <div class="section-head"><h2>第四部分：RTS 审核意见</h2><span class="subline">供 RTS 打开 HTML 后审核记录</span></div>
+      <div class="section-head"><h2>第四部分：RTS/GTS 审核意见</h2><span class="subline">供 RTS/GTS 打开 HTML 后审核记录</span></div>
       <div class="rts-checklist">
         <div class="rts-options">
           <label>□ 资料完整，可进入分析</label>

@@ -3,41 +3,42 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RTS审核界面｜{{ app_name }} {{ version }}</title>
+  <title>RTS/GTS审核界面｜{{ app_name }} {{ version }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}-result-static">
 </head>
 <body>
   <header class="app-header">
     <div class="title-block">
-      <h1>RTS跳值排查审核界面</h1>
+      <h1>RTS/GTS跳值排查审核界面</h1>
       <span class="version">{{ version }}</span>
       <span id="rtsStatus" class="status-pill">等待上传</span>
     </div>
     <div class="toolbar">
       <a class="nav-link" href="/">返回一线填写</a>
-      <button type="button" id="generateRtsBtn" class="primary">生成RTS审核返回报告</button>
+      <button type="button" id="generateRtsBtn" class="primary">生成RTS/GTS审核返回报告</button>
       <button type="button" id="openOutputBtn">打开输出文件夹</button>
     </div>
   </header>
 
   <main class="page-shell rts-page">
-    <section class="workflow-guide">
+    <a class="must-read-notice" href="#usageNotice">使用前务必读懂闭环流程（使用须知）</a>
+    <section id="usageNotice" class="workflow-guide">
       <div class="guide-head">
-        <h2>RTS审核流程</h2>
-        <span class="tag">审核后返回ZIP给一线</span>
+        <h2>使用须知</h2>
+        <span class="tag">审核后返回 ZIP 给一线</span>
       </div>
       <div class="workflow-steps detailed">
         <div>
           <strong>1. 进入并导入</strong>
-          <span>在一线工具首页点击“RTS审核界面”，打开本页；点击“上传一线报告包”，选择一线发来的报告 ZIP，系统会读取 39 项记录、照片、异常和缺失情况。</span>
+          <span>在一线工具首页点击“RTS/GTS审核界面”，打开本页；点击“上传一线报告包”，选择一线发来的报告 ZIP，系统会读取 39 项记录、照片、异常和缺失情况。</span>
         </div>
         <div>
           <strong>2. 逐项审核</strong>
-          <span>先填写“审核结论、审核说明、审核时间”，再按 1-36 步逐项查看。照片可点击放大、缩小和旋转；需要一线补充时，在对应步骤勾选补记录或补照片并写清楚要求。</span>
+          <span>先填写“审核结论、审核说明、审核时间”，再按步骤逐项选择“通过”或“需补充”。照片可点击放大、缩小和旋转；需要一线补充时，在对应步骤勾选补记录或补照片并写清楚要求。</span>
         </div>
         <div>
           <strong>3. 返回一线</strong>
-          <span>点击“生成RTS审核返回报告”得到返回 ZIP，把该 ZIP 发给一线。一线导入原 ZIP 和该返回 ZIP 后，只处理被 RTS 标记的补充项，补完再重新生成报告 ZIP 发回 RTS。</span>
+          <span>点击“生成RTS/GTS审核返回报告”得到返回 ZIP，把该 ZIP 发给一线。一线导入原 ZIP 和该返回 ZIP 后，只处理被 RTS/GTS 标记的补充项，补完再重新生成报告 ZIP 发回 RTS/GTS。</span>
         </div>
       </div>
     </section>
@@ -45,14 +46,14 @@
     <section class="info-band rts-upload-band">
       <div>
         <h2>上传一线报告包</h2>
-        <p class="help-text">支持上传一线生成的 ZIP 报告包，或直接上传其中的 <code>report_data.json</code>。上传 ZIP 时可在 RTS 返回报告中保留重点图片。</p>
+        <p class="help-text">支持上传一线生成的 ZIP 报告包，或直接上传其中的 <code>report_data.json</code>。上传 ZIP 时可在 RTS/GTS 返回报告中保留重点图片。</p>
         <label class="file-drop" for="rtsFileInput">
           <input id="rtsFileInput" type="file" accept=".zip,.json">
           <span>点击选择一线报告 ZIP / report_data.json</span>
         </label>
       </div>
       <div class="stats-grid" id="sourceStatsGrid">
-        <div><span>问题编号</span><strong id="sourceIssueNo">-</strong></div>
+        <div class="issue-stat"><span>问题编号</span><strong id="sourceIssueNo">-</strong></div>
         <div><span>异常项</span><strong id="sourceAbnormal">0</strong></div>
         <div><span>已处理</span><strong id="sourceHandled">0</strong></div>
         <div><span>待确认</span><strong id="sourcePending">0</strong></div>
@@ -64,17 +65,18 @@
     <section id="rtsErrorPanel" class="error-panel hidden"><h2>请补充以下内容</h2><div id="rtsErrorList"></div></section>
 
     <section class="group-section">
-      <div class="group-head"><h2>RTS审核意见</h2><span class="tag">必填</span></div>
+      <div class="group-head"><h2>RTS/GTS审核意见</h2><span class="tag">必填</span></div>
       <form id="rtsForm" class="rts-form">
         <label class="field"><span>审核结论<b>*</b></span>
           <select name="review_conclusion" data-required="1">
+            <option value="审核通过，可进入分析">审核通过，可进入分析</option>
             <option value="资料完整，可进入分析">资料完整，可进入分析</option>
             <option value="资料不完整，需补充">资料不完整，需补充</option>
             <option value="暂不通过，需重新提交">暂不通过，需重新提交</option>
           </select>
         </label>
         <label class="field"><span>审核时间<b>*</b></span><input name="review_date" data-required="1" type="datetime-local"></label>
-        <label class="field wide"><span>审核说明<b>*</b></span><textarea name="review_notes" data-required="1" rows="5" placeholder="填写 RTS 复核过程、判断依据、总体意见或返回说明"></textarea></label>
+        <label class="field wide"><span>审核说明<b>*</b></span><textarea name="review_notes" data-required="1" rows="5" placeholder="填写 RTS/GTS 复核过程、判断依据、总体意见或返回说明"></textarea></label>
       </form>
     </section>
 
@@ -82,15 +84,16 @@
       <div class="group-head rts-review-head">
         <div>
           <h2>逐项审核</h2>
-          <p class="help-text">按 1-36 步逐项查看一线记录和照片，需要返修时直接在该步骤勾选补充内容。</p>
+          <p class="help-text">每个步骤都要选择“通过”或“需补充”；需要返修时直接在该步骤勾选补充内容。</p>
         </div>
-        <span id="stepReviewCount" class="tag">0 项</span>
+        <span id="stepReviewCount" class="tag">0 / 0 已审核</span>
       </div>
       <div class="rts-review-toolbar">
         <button type="button" class="rts-filter-btn active" data-rts-filter="all">全部步骤</button>
         <button type="button" class="rts-filter-btn" data-rts-filter="attention">一线重点</button>
         <button type="button" class="rts-filter-btn" data-rts-filter="missing">资料缺失</button>
         <button type="button" class="rts-filter-btn" data-rts-filter="supplement">已标记补充</button>
+        <button type="button" id="markAllApprovedBtn" class="secondary">全部标记通过</button>
         <span id="supplementCount" class="tag">0 项已选</span>
       </div>
       <div id="rtsStepReviewList" class="rts-step-review-list">
@@ -122,7 +125,7 @@
       <button type="button" id="rtsModalClose">关闭</button>
     </div>
     <div id="rtsImageStage" class="image-stage">
-      <img id="rtsModalImage" class="modal-image" alt="RTS审核图片预览">
+      <img id="rtsModalImage" class="modal-image" alt="RTS/GTS审核图片预览">
     </div>
   </div>
 

@@ -1,7 +1,0 @@
-required_root_files_missing=[]
-format_version=frontline-report-v2
-report_status=final
-item_count=39
-image_ref_count=44
-missing_image_refs=[]
-zip_size=372974

@@ -21,7 +21,7 @@ from werkzeug.utils import secure_filename
 
 
 APP_NAME = "免疫跳值排查反馈报告生成工具"
-VERSION = "V1.4"
+VERSION = "V1.7"
 SHEET_NAME = "用服工程师排查反馈表"
 TEMPLATE_NAME = "免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx"
 PACKAGE_FORMAT_VERSION = "frontline-report-v2"
@@ -60,6 +60,10 @@ CONCLUSION_CLASS = {
     "异常": "abnormal",
     "已处理": "handled",
     "待确认": "pending",
+}
+ITEM_REVIEW_DECISIONS = {
+    "approved": "通过",
+    "supplement": "需补充",
 }
 
 SHORT_DESCRIPTION_WORDS = {"正常", "无", "无异常", "OK", "ok", "已完成", "符合", "没问题", "良好", "通过"}
@@ -177,6 +181,77 @@ def normalize_conclusion(value):
 
 def conclusion_class(value):
     return CONCLUSION_CLASS.get(normalize_conclusion(value), "normal")
+
+
+def normalize_source_report_conclusions(source_data):
+    """Repair legacy report conclusions using their persisted CSS class when needed."""
+    if not isinstance(source_data, dict):
+        return source_data
+
+    counts = {name: 0 for name in CONCLUSION_OPTIONS}
+    report_items = list(iter_report_items(source_data))
+    for item in report_items:
+        raw_conclusion = normalize_text(item.get("conclusion"))
+        if raw_conclusion in CONCLUSION_CLASS:
+            normalized = raw_conclusion
+        else:
+            normalized = CONCLUSION_OPTIONS.get(normalize_text(item.get("conclusion_class")), "正常")
+        item["conclusion"] = normalized
+        item["conclusion_class"] = conclusion_class(normalized)
+        counts[item["conclusion_class"]] += 1
+
+    stats = dict(source_data.get("stats") or {})
+    stats.update(
+        {
+            "total_items": len(report_items) or stats.get("total_items", 0),
+            "normal_count": counts["normal"],
+            "abnormal_count": counts["abnormal"],
+            "handled_count": counts["handled"],
+            "pending_count": counts["pending"],
+            "attention_count": counts["abnormal"] + counts["handled"] + counts["pending"],
+        }
+    )
+    source_data["stats"] = stats
+    source_data["attention_items"] = build_attention_items(report_items)
+    return source_data
+
+
+def normalize_item_reviews(item_reviews):
+    normalized = {}
+    if not isinstance(item_reviews, dict):
+        return normalized
+
+    for item_key, value in item_reviews.items():
+        key = normalize_text(item_key)
+        if not key:
+            continue
+        if isinstance(value, dict):
+            decision = normalize_text(value.get("decision"))
+            note = normalize_text(value.get("note") or value.get("review") or value.get("text"))
+        else:
+            decision = ""
+            note = normalize_text(value)
+        if decision not in ITEM_REVIEW_DECISIONS:
+            decision = ""
+        if decision or note:
+            normalized[key] = {
+                "decision": decision,
+                "decision_label": ITEM_REVIEW_DECISIONS.get(decision, "未单独选择"),
+                "note": note,
+            }
+    return normalized
+
+
+def summarize_item_reviews(item_reviews, source_data):
+    total = len(list(iter_report_items(source_data)))
+    approved = sum(1 for review in item_reviews.values() if review.get("decision") == "approved")
+    supplement = sum(1 for review in item_reviews.values() if review.get("decision") == "supplement")
+    return {
+        "total": total,
+        "approved": approved,
+        "supplement": supplement,
+        "unreviewed": max(0, total - approved - supplement),
+    }
 
 
 def is_short_description(value):
@@ -1210,6 +1285,7 @@ def api_report_import():
     file_storage.save(str(zip_path))
 
     source_data, extract_root = load_report_data_from_zip(zip_path, import_session_id)
+    source_data = normalize_source_report_conclusions(source_data)
     restored = restore_editable_report_from_source(source_data, extract_root)
     logging.info("frontline report restored: source=%s session=%s items=%s", import_session_id, restored["session_id"], len(restored["items"]))
     return jsonify({"ok": True, **restored})
@@ -1219,7 +1295,7 @@ def api_report_import():
 def api_report_import_rts_review():
     file_storage = request.files.get("rts_file")
     if not file_storage or not file_storage.filename:
-        raise UserFacingError("请选择 RTS 审核返回 ZIP 或 rts_review_data.json。")
+        raise UserFacingError("请选择 RTS/GTS 审核返回 ZIP 或 rts_review_data.json。")
 
     session_id = "frontline_rts_" + uuid.uuid4().hex
     session_root = RTS_UPLOADS_DIR / session_id
@@ -1229,18 +1305,26 @@ def api_report_import_rts_review():
     if lower.endswith(".zip"):
         zip_path = session_root / "rts_review.zip"
         file_storage.save(str(zip_path))
-        rts_data, _ = load_rts_review_data_from_zip(zip_path, session_id)
+        rts_data, extract_root = load_rts_review_data_from_zip(zip_path, session_id)
     elif lower.endswith(".json"):
-        rts_data, _ = load_rts_review_data_from_json(file_storage, session_id)
+        rts_data, extract_root = load_rts_review_data_from_json(file_storage, session_id)
     else:
-        raise UserFacingError("文件格式不支持，请上传 RTS 返回 ZIP 或 rts_review_data.json。")
+        raise UserFacingError("文件格式不支持，请上传 RTS/GTS 返回 ZIP 或 rts_review_data.json。")
 
-    source_data = rts_data.get("source_data") or {}
+    source_data = normalize_source_report_conclusions(rts_data.get("source_data") or {})
     supplement_requests = normalize_supplement_requests(rts_data.get("supplement_requests") or [], source_data)
-    logging.info("RTS return imported by frontline: session=%s review=%s requests=%s", session_id, rts_data.get("review_no"), len(supplement_requests))
+    restored = restore_editable_report_from_source(source_data, extract_root)
+    logging.info(
+        "RTS return restored by frontline: session=%s review=%s items=%s requests=%s",
+        session_id,
+        rts_data.get("review_no"),
+        len(restored["items"]),
+        len(supplement_requests),
+    )
     return jsonify(
         {
             "ok": True,
+            **restored,
             "review_no": rts_data.get("review_no") or "",
             "source_issue_no": rts_data.get("source_issue_no") or "",
             "review": rts_data.get("review") or {},
@@ -1605,7 +1689,7 @@ def load_rts_review_data_from_zip(zip_path, session_id):
                 shutil.copyfileobj(src, dst)
 
     if not json_member:
-        raise UserFacingError("RTS 返回 ZIP 中未找到 rts_review_data.json，请确认上传的是 RTS 审核返回 ZIP。")
+        raise UserFacingError("RTS/GTS 返回 ZIP 中未找到 rts_review_data.json，请确认上传的是 RTS/GTS 审核返回 ZIP。")
 
     data_path = extract_root / json_member
     data = json.loads(data_path.read_text(encoding="utf-8"))
@@ -1739,7 +1823,7 @@ def normalize_supplement_requests(requests, source_data=None):
             or request_item.get("text")
         )
         if not requirement:
-            requirement = "请按 RTS 意见补充该项资料。"
+            requirement = "请按 RTS/GTS 意见补充该项资料。"
 
         key = (item_id, need_record, need_before, need_after, requirement)
         if key in seen:
@@ -1845,15 +1929,18 @@ def make_rts_review_no(source_issue_no):
 
 def make_rts_slug(source_data, review_no):
     base_info = source_data.get("base_info") or {}
-    hospital = safe_name(base_info.get("hospital"), "医院")
-    serial = safe_name(base_info.get("serial"), "设备序列号")
-    return "RTS审核返回报告_%s_%s_%s" % (hospital, serial, safe_name(review_no, "RTS"))
+    # The slug is used for both the output directory and its HTML/ZIP filename.
+    # Keep it compact so a valid long issue number does not exceed Windows paths.
+    hospital = safe_name(base_info.get("hospital"), "医院")[:24]
+    serial = safe_name(base_info.get("serial"), "设备序列号")[:24]
+    review_id = safe_name(review_no, "RTS")[-24:]
+    return safe_name("RTS_GTS审核返回报告_%s_%s_%s" % (hospital, serial, review_id), "RTS_GTS审核返回报告")
 
 
 def validate_rts_review_payload(payload):
     errors = []
     review = payload.get("review") or {}
-    source_data = payload.get("source_data") or {}
+    source_data = normalize_source_report_conclusions(payload.get("source_data") or {})
     supplement_requests = normalize_supplement_requests(payload.get("supplement_requests") or [], source_data)
     if not source_data.get("base_info"):
         errors.append("未读取到一线报告基础信息，请先上传一线报告包或 report_data.json。")
@@ -1862,6 +1949,14 @@ def validate_rts_review_payload(payload):
             errors.append("%s为必填。" % RTS_REVIEW_FIELDS[key])
     if normalize_text(review.get("supplement_required")) == "是" and not normalize_text(review.get("supplement_items")) and not supplement_requests:
         errors.append("已选择需要补充资料，请填写文字说明或勾选结构化补充清单。")
+    item_reviews = normalize_item_reviews(payload.get("item_reviews") or {})
+    review_stats = summarize_item_reviews(item_reviews, source_data)
+    if review_stats["unreviewed"]:
+        errors.append("仍有 %s 个步骤未选择“通过”或“需补充”。" % review_stats["unreviewed"])
+    supplement_decisions = {item_id for item_id, item_review in item_reviews.items() if item_review.get("decision") == "supplement"}
+    supplement_items = {request.get("item_id") for request in supplement_requests}
+    if supplement_decisions - supplement_items:
+        errors.append("选择“需补充”的步骤还没有填写补充内容。")
     return errors
 
 
@@ -1900,6 +1995,7 @@ def api_rts_import():
     else:
         raise UserFacingError("文件格式不支持，请上传一线报告 ZIP 或 report_data.json。")
 
+    source_data = normalize_source_report_conclusions(source_data)
     source_data = enrich_source_image_urls(source_data, session_id)
     source_data["attention_items"] = build_attention_from_source(source_data)
     logging.info("RTS source imported: session=%s issue=%s", session_id, source_data.get("issue_no"))
@@ -1913,24 +2009,25 @@ def api_rts_report():
     if errors:
         return jsonify({"ok": False, "errors": errors}), 400
 
-    source_data = payload.get("source_data") or {}
+    source_data = normalize_source_report_conclusions(payload.get("source_data") or {})
     review = dict(payload.get("review") or {})
-    item_reviews = payload.get("item_reviews") or {}
+    item_reviews = normalize_item_reviews(payload.get("item_reviews") or {})
     supplement_requests = normalize_supplement_requests(payload.get("supplement_requests") or [], source_data)
     source_session_id = payload.get("source_session_id") or ""
 
     review["supplement_required"] = "是" if supplement_requests else "否"
     if supplement_requests and not normalize_text(review.get("supplement_items")):
         review["supplement_items"] = "请按结构化补充清单返回补充资料。"
-    review["suggestions"] = normalize_text(review.get("suggestions")) or normalize_text(review.get("review_notes")) or "请按 RTS 审核说明执行。"
+    review["suggestions"] = normalize_text(review.get("suggestions")) or normalize_text(review.get("review_notes")) or "请按 RTS/GTS 审核说明执行。"
     review["upgrade_required"] = normalize_text(review.get("upgrade_required")) or "否"
     review["upgrade_target"] = normalize_text(review.get("upgrade_target"))
-    review["reviewer"] = normalize_text(review.get("reviewer")) or "RTS"
+    review["reviewer"] = normalize_text(review.get("reviewer")) or "RTS/GTS"
     review["initial_judgement"] = review.get("initial_judgement") or []
 
     source_issue_no = source_data.get("issue_no") or (source_data.get("base_info") or {}).get("issue_no") or "未编号"
     review_no = make_rts_review_no(source_issue_no)
     review_tags = summarize_review_tags(review)
+    review_stats = summarize_item_reviews(item_reviews, source_data)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     slug = make_rts_slug(source_data, review_no)
@@ -1951,6 +2048,7 @@ def api_rts_report():
         review=review,
         review_tags=review_tags,
         item_reviews=item_reviews,
+        review_stats=review_stats,
         attention_items=attention_items,
         supplement_requests=supplement_requests,
         generated_at=generated_at,
@@ -1966,6 +2064,7 @@ def api_rts_report():
         "review": review,
         "review_tags": review_tags,
         "item_reviews": item_reviews,
+        "review_stats": review_stats,
         "supplement_requests": supplement_requests,
         "source_data": source_data_for_report,
         "attention_items": attention_items,

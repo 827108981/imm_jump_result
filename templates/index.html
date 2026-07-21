@@ -13,39 +13,38 @@
       <span class="version">{{ version }}</span>
       <span id="templateStatus" class="status-pill">读取模板中</span>
     </div>
-    <div class="toolbar header-note">一线采集、RTS审核、补充返修都在本工具内闭环完成</div>
+    <div class="toolbar header-note">一线采集、RTS/GTS审核、补充返修都在本工具内完成</div>
   </header>
 
   <main class="page-shell">
-    <section class="workflow-guide">
+    <a class="must-read-notice" href="#usageNotice">使用前务必读懂闭环流程（使用须知）</a>
+    <section id="usageNotice" class="workflow-guide">
       <div class="guide-head">
-        <h2>闭环流程</h2>
-        <span class="tag">一线 ⇄ RTS</span>
+        <h2>使用须知</h2>
+        <span class="tag">一线 ⇄ RTS/GTS</span>
       </div>
       <div class="workflow-steps detailed">
         <div>
           <strong>1. 一线采集</strong>
-          <span>手机开热点、电脑连接该热点后，点击“生成手机二维码”；手机扫码进入采集页，可拍照、选图、填写记录并同步到当前电脑报告。采集完成后点击“检查完整性”，通过后点击“生成报告ZIP”发给 RTS。</span>
+          <span>手机开热点、电脑连接该热点后，点击“生成手机二维码”；手机扫码进入采集页，可拍照、选图、填写记录并同步到当前电脑报告。采集完成后点击“检查完整性”，通过后点击“生成报告ZIP”发给 RTS/GTS。</span>
         </div>
         <div>
-          <strong>2. RTS审核</strong>
-          <span>点击“RTS审核界面”进入审核页，导入一线 ZIP，按步骤查看记录和照片；需要返修时勾选补记录、补原始照片或补调试后照片，填写审核结论和审核说明，生成 RTS 审核返回 ZIP。</span>
+          <strong>2. RTS/GTS审核</strong>
+          <span>点击“RTS/GTS审核界面”进入审核页，导入一线 ZIP，逐项选择通过或需补充；需要返修时勾选补记录、补原始照片或补调试后照片，填写审核结论和审核说明，生成 RTS/GTS 审核返回 ZIP。</span>
         </div>
         <div>
           <strong>3. 一线补充</strong>
-          <span>一线先导入原 ZIP 恢复可编辑报告，再导入 RTS 审核返回 ZIP，只看补充项逐项补齐；补完后再次检查并生成报告 ZIP，发回 RTS 复核。</span>
+          <span>一线收到 RTS/GTS 审核返回 ZIP 后，直接导入该 ZIP 恢复原报告、照片和补充清单；补完后再次检查并生成报告 ZIP，发回 RTS/GTS 复核。</span>
         </div>
       </div>
     </section>
 
     <section class="action-board">
       <div class="action-group action-main">
-        <div class="action-title"><h2>采集与返修</h2><span>先采集，收到RTS意见后再导入补充清单</span></div>
+        <div class="action-title"><h2>采集与返修</h2><span>先采集，收到 RTS/GTS 意见后再导入补充清单</span></div>
         <div class="action-row">
           <button type="button" id="mobileTaskBtn">生成手机二维码</button>
-          <button type="button" id="importReportBtn">导入原ZIP</button>
-          <input id="importReportInput" type="file" accept=".zip" hidden>
-          <button type="button" id="importRtsReviewBtn">导入RTS返回ZIP</button>
+          <button type="button" id="importRtsReviewBtn">导入RTS/GTS返回ZIP</button>
           <input id="importRtsReviewInput" type="file" accept=".zip,.json" hidden>
         </div>
       </div>
@@ -60,13 +59,13 @@
         </div>
       </div>
       <div class="action-group">
-        <div class="action-title"><h2>检查与输出</h2><span>提交前先检查，ZIP用于发送RTS</span></div>
+        <div class="action-title"><h2>检查与输出</h2><span>提交前先检查，ZIP用于发送 RTS/GTS</span></div>
         <div class="action-row">
           <button type="button" id="checkBtn">检查完整性</button>
           <button type="button" id="generateBtn" class="primary">生成报告ZIP</button>
           <button type="button" id="openOutputBtn">打开输出文件夹</button>
           <a class="nav-link" href="/mobile-offline/download">下载离线HTML</a>
-          <a class="nav-link" href="/rts" target="_blank">RTS审核界面</a>
+          <a class="nav-link" href="/rts" target="_blank">RTS/GTS审核界面</a>
         </div>
       </div>
     </section>
@@ -126,8 +125,8 @@
     <section id="supplementPanel" class="supplement-panel hidden">
       <div class="supplement-panel-head">
         <div>
-          <h2>RTS补充清单</h2>
-          <p id="supplementSummary">尚未导入 RTS 返回 ZIP。</p>
+          <h2>RTS/GTS补充清单</h2>
+          <p id="supplementSummary">尚未导入 RTS/GTS 返回 ZIP。</p>
         </div>
         <div class="supplement-actions">
           <button type="button" id="showSupplementOnlyBtn">只看补充项</button>

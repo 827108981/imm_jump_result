@@ -15,6 +15,9 @@
     supplementRequests: [],
     supplementMap: {},
     supplementOnly: false,
+    activeItemId: "",
+    itemFilter: "all",
+    basicCollapsed: false,
     mobile: {
       taskId: "",
       token: "",
@@ -38,6 +41,8 @@
     }
   };
 
+  const CUSTOM_PROJECT_VALUE = "__custom__";
+
   localStorage.setItem("jumpCheckSessionId", state.sessionId);
 
   const FIELD_LABELS = {
@@ -51,6 +56,9 @@
     initToolbar();
     initItemEvents();
     initImageModal();
+    initUsageGuide();
+    initMoreTools();
+    initWorkbench();
     loadTemplate();
     refreshDrafts();
   });
@@ -154,8 +162,42 @@
         state.errorFields.delete(event.target.name);
         applyBaseFieldErrors();
       }
+      if (event.target && (event.target.name === "model" || event.target.name === "jump_project")) {
+        state.activeItemId = "";
+        renderItems();
+      }
       updateStats();
+      updateBasicInfoState();
     });
+    const projectSelect = document.getElementById("base_jump_project_select");
+    if (projectSelect) {
+      projectSelect.addEventListener("change", function () {
+        const projectInput = document.getElementById("base_jump_project");
+        if (!projectInput) return;
+        if (projectSelect.value === CUSTOM_PROJECT_VALUE) {
+          projectInput.value = "";
+          projectInput.classList.remove("hidden");
+          window.setTimeout(function () { projectInput.focus(); }, 0);
+        } else {
+          projectInput.value = projectSelect.value || "";
+          projectInput.classList.add("hidden");
+        }
+        projectInput.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      syncJumpProjectControl(document.getElementById("base_jump_project").value);
+    }
+    updateBasicInfoState();
+  }
+
+  function syncJumpProjectControl(value) {
+    const projectSelect = document.getElementById("base_jump_project_select");
+    const projectInput = document.getElementById("base_jump_project");
+    if (!projectSelect || !projectInput) return;
+    const project = String(value || "");
+    const known = Array.from(projectSelect.options).some(function (option) { return option.value === project; });
+    projectInput.value = project;
+    projectSelect.value = project ? (known ? project : CUSTOM_PROJECT_VALUE) : "";
+    projectInput.classList.toggle("hidden", !project || known);
   }
 
   function initToolbar() {
@@ -167,10 +209,12 @@
     document.getElementById("importRtsReviewInput").addEventListener("change", importRtsReviewZip);
     document.getElementById("showSupplementOnlyBtn").addEventListener("click", function () {
       state.supplementOnly = true;
+      state.itemFilter = "supplement";
       renderItems();
     });
     document.getElementById("showAllItemsBtn").addEventListener("click", function () {
       state.supplementOnly = false;
+      state.itemFilter = "all";
       renderItems();
     });
     document.getElementById("checkSupplementBtn").addEventListener("click", checkSupplementCompletion);
@@ -181,6 +225,87 @@
     const mobileCopyBtn = document.getElementById("mobileCopyBtn");
     if (mobileTaskBtn) mobileTaskBtn.addEventListener("click", createMobileTask);
     if (mobileCopyBtn) mobileCopyBtn.addEventListener("click", copyMobileLink);
+    document.getElementById("topCheckProxyBtn").addEventListener("click", function () {
+      document.getElementById("checkBtn").click();
+    });
+    document.getElementById("topGenerateProxyBtn").addEventListener("click", function () {
+      document.getElementById("generateBtn").click();
+    });
+    document.getElementById("mobilePanelCollapseBtn").addEventListener("click", toggleMobilePanel);
+  }
+
+  function initUsageGuide() {
+    const guide = document.getElementById("usageNotice");
+    const button = document.getElementById("usageToggleBtn");
+    const expanded = localStorage.getItem("imm_jump_usage_expanded") === "1";
+    setUsageGuideExpanded(expanded);
+    button.addEventListener("click", function () {
+      setUsageGuideExpanded(guide.classList.contains("is-collapsed"));
+    });
+  }
+
+  function setUsageGuideExpanded(expanded) {
+    const guide = document.getElementById("usageNotice");
+    const button = document.getElementById("usageToggleBtn");
+    if (!guide || !button) return;
+    guide.classList.toggle("is-collapsed", !expanded);
+    button.setAttribute("aria-expanded", expanded ? "true" : "false");
+    button.textContent = expanded ? "收起说明" : "查看说明";
+    localStorage.setItem("imm_jump_usage_expanded", expanded ? "1" : "0");
+  }
+
+  function initMoreTools() {
+    const button = document.getElementById("moreToolsBtn");
+    const panel = document.getElementById("moreToolsPanel");
+    function closeMoreTools() {
+      panel.classList.add("hidden");
+      button.setAttribute("aria-expanded", "false");
+    }
+    button.addEventListener("click", function (event) {
+      event.stopPropagation();
+      const willOpen = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden", !willOpen);
+      button.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest(".more-tools-wrap")) closeMoreTools();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeMoreTools();
+    });
+  }
+
+  function initWorkbench() {
+    document.getElementById("basicInfoToggleBtn").addEventListener("click", toggleBasicInfo);
+    document.getElementById("itemNavigationList").addEventListener("click", function (event) {
+      const button = event.target.closest("[data-item-nav]");
+      if (button) setActiveItem(button.dataset.itemNav, { scroll: true });
+    });
+    document.getElementById("itemFilterBar").addEventListener("click", function (event) {
+      const button = event.target.closest("[data-item-filter]");
+      if (button) setItemFilter(button.dataset.itemFilter);
+    });
+    document.getElementById("previousItemBtn").addEventListener("click", function () { moveActiveItem(-1); });
+    document.getElementById("nextItemBtn").addEventListener("click", function () { moveActiveItem(1); });
+    document.getElementById("nextTodoBtn").addEventListener("click", goToNextTodo);
+    document.addEventListener("keydown", function (event) {
+      if (event.isComposing || event.altKey && event.ctrlKey) return;
+      const tag = (event.target && event.target.tagName || "").toLowerCase();
+      const isEditor = tag === "textarea" || tag === "input" || tag === "select";
+      if (event.altKey && event.key === "ArrowUp" && !isEditor) {
+        event.preventDefault();
+        moveActiveItem(-1);
+      } else if (event.altKey && event.key === "ArrowDown" && !isEditor) {
+        event.preventDefault();
+        moveActiveItem(1);
+      } else if (event.ctrlKey && event.key === "Enter") {
+        event.preventDefault();
+        goToNextTodo();
+      } else if (event.ctrlKey && (event.key === "s" || event.key === "S")) {
+        event.preventDefault();
+        saveDraft();
+      }
+    });
   }
 
   function initItemEvents() {
@@ -197,8 +322,11 @@
       if (fieldNode) fieldNode.classList.remove("has-error");
       const card = target.closest(".item-card");
       if (card && !state.errorItemIds.has(target.dataset.itemId)) card.classList.remove("has-error");
-      refreshShortWarning(target.dataset.itemId);
       updateStats();
+    });
+
+    root.addEventListener("focusout", function (event) {
+      if (event.target.matches(".item-textarea")) refreshShortWarning(event.target.dataset.itemId);
     });
 
     root.addEventListener("change", function (event) {
@@ -206,14 +334,39 @@
       if (!target.matches(".conclusion-select")) return;
       const item = ensureItemData(target.dataset.itemId);
       item.conclusion = target.value || "正常";
-      renderItems();
       updateStats();
+      updateCurrentItemUI();
     });
 
     root.addEventListener("click", function (event) {
       const uploadButton = event.target.closest("[data-upload]");
       const deleteButton = event.target.closest("[data-delete-image]");
       const previewImage = event.target.closest("[data-preview-image]");
+      const conclusionButton = event.target.closest("[data-conclusion]");
+      const guideButton = event.target.closest("[data-item-guide-toggle]");
+
+      if (conclusionButton) {
+        const itemId = conclusionButton.dataset.itemId;
+        const item = ensureItemData(itemId);
+        item.conclusion = conclusionButton.dataset.conclusion || "正常";
+        const select = root.querySelector(".conclusion-select[data-item-id='" + itemId + "']");
+        if (select) {
+          select.value = item.conclusion;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+        } else {
+          updateStats();
+          updateCurrentItemUI();
+        }
+        return;
+      }
+
+      if (guideButton) {
+        const guide = guideButton.closest(".item-guide");
+        const collapsed = guide.classList.toggle("is-collapsed");
+        guideButton.textContent = collapsed ? "展开" : "收起";
+        guideButton.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        return;
+      }
 
       if (uploadButton) {
         const itemId = uploadButton.dataset.itemId;
@@ -270,6 +423,7 @@
       state.items.forEach(function (item) {
         ensureItemData(item.id);
       });
+      state.activeItemId = getDefaultActiveItemId();
       renderItems();
       updateStats();
       setTemplateStatus("模板已加载", "ok");
@@ -318,29 +472,23 @@
   }
 
   function renderItems() {
-    const sortedItems = state.items.slice().sort(function (a, b) {
-      return Number(a.sort_order || a.index || 0) - Number(b.sort_order || b.index || 0);
-    });
-    const visibleItems = state.supplementOnly
-      ? sortedItems.filter(function (item) { return Boolean(state.supplementMap[item.id]); })
-      : sortedItems;
-    const grouped = [{
-      category: "排查步骤（1-36，第35步含4项）",
-      items: visibleItems
-    }];
-
-    document.getElementById("itemGroups").innerHTML = grouped.map(renderGroup).join("");
-  }
-
-  function renderGroup(group) {
-    return [
-      '<section class="group-section">',
-      '<div class="group-head"><h2>' + escapeHtml(group.category) + '</h2><span class="tag">' + group.items.length + " 项</span></div>",
-      '<div class="item-list">',
-      group.items.length ? group.items.map(renderItem).join("") : '<div class="empty-state">当前没有需要显示的排查项。</div>',
-      '</div>',
-      '</section>'
-    ].join("");
+    const sortedItems = getSortedItems();
+    const root = document.getElementById("itemGroups");
+    if (!sortedItems.length) {
+      root.innerHTML = '<div class="empty-state">当前没有可填写的排查项。</div>';
+      renderItemNavigator();
+      return;
+    }
+    if (!state.activeItemId || !sortedItems.some(function (item) { return item.id === state.activeItemId; })) {
+      state.activeItemId = getDefaultActiveItemId(sortedItems);
+    }
+    root.innerHTML = sortedItems.map(renderItem).join("");
+    const filtered = getFilteredItems();
+    if (filtered.length && !filtered.some(function (item) { return item.id === state.activeItemId; })) {
+      state.activeItemId = filtered[0].id;
+    }
+    renderItemNavigator();
+    updateCurrentItemUI();
   }
 
   function renderItem(item) {
@@ -349,11 +497,11 @@
     const recordError = hasItemFieldError(item.id, "measured_value");
     const supplement = state.supplementMap[item.id];
     return [
-      '<article class="item-card' + (hasError ? " has-error" : "") + (supplement ? " needs-supplement" : "") + '" id="' + item.id + '">',
+      '<article class="item-card' + (hasError ? " has-error" : "") + (supplement ? " needs-supplement" : "") + '" id="' + item.id + '" data-item-id="' + escapeHtml(item.id) + '">',
       '<div class="item-card-header">',
       '<div class="item-title">',
       '<strong>' + escapeHtml(item.display_step || item.step) + '｜' + escapeHtml(item.action) + '</strong>',
-      '<small>' + escapeHtml(item.category || "未分类") + '｜是否执行：是</small>',
+      '<small>' + escapeHtml(item.category || "未分类") + '</small>',
       '</div>',
       '<div class="require-tags">',
       renderSupplementBadge(supplement),
@@ -363,24 +511,27 @@
       '</div>',
       '</div>',
       '<div class="item-body">',
-      '<div class="item-meta">',
-      '<div class="meta-box"><span>排查动作</span><p>' + escapeHtml(item.action) + '</p></div>',
-      '<div class="meta-box"><span>合格指标</span><p>' + escapeHtml(item.standard) + '</p></div>',
-      '</div>',
+      '<div class="item-guide is-collapsed"><div class="item-guide-head"><div><strong>排查依据</strong><div class="item-guide-summary">' + escapeHtml(item.action) + '；' + escapeHtml(item.standard) + '</div></div><button type="button" data-item-guide-toggle aria-expanded="false">展开</button></div><div class="item-guide-body"><div class="meta-box"><span>排查动作</span><p>' + escapeHtml(item.action) + '</p></div><div class="meta-box"><span>合格指标</span><p>' + escapeHtml(item.standard) + '</p></div>' + renderReferenceMaterials(item) + '</div></div>',
       renderSupplementBox(supplement),
       '<div class="conclusion-row">',
       '<label><span class="textarea-label">排查结论</span>',
-      '<select class="conclusion-select conclusion-' + conclusionClass(data.conclusion) + '" data-item-id="' + item.id + '">',
+      '<select class="conclusion-select conclusion-' + conclusionClass(data.conclusion) + '" data-item-id="' + item.id + '" aria-hidden="true" tabindex="-1">',
       renderConclusionOption(data.conclusion, "正常"),
       renderConclusionOption(data.conclusion, "异常"),
       renderConclusionOption(data.conclusion, "已处理"),
       renderConclusionOption(data.conclusion, "待确认"),
       '</select></label>',
-      '<div class="conclusion-tip">异常、已处理、待确认会在报告顶部自动汇总，便于 RTS/GTS 快速审核。</div>',
+      '<div class="conclusion-segments" role="group" aria-label="排查结论">',
+      renderConclusionSegment(item.id, data.conclusion, "正常"),
+      renderConclusionSegment(item.id, data.conclusion, "异常"),
+      renderConclusionSegment(item.id, data.conclusion, "已处理"),
+      renderConclusionSegment(item.id, data.conclusion, "待确认"),
+      '</div><div class="conclusion-tip">异常、已处理、待确认会自动汇总，便于 RTS/GTS 快速审核。</div>',
       '</div>',
       '<label class="item-field' + (recordError ? " has-error" : "") + '">',
       '<span class="textarea-label">实测情况记录（' + (item.record_required ? "必填" : "选填") + '）</span>',
-      '<textarea class="item-textarea' + (recordError ? " has-error" : "") + '" data-item-id="' + item.id + '" rows="3">' + escapeHtml(data.measured_value || "") + '</textarea>',
+      '<textarea class="item-textarea' + (recordError ? " has-error" : "") + '" data-item-id="' + item.id + '" rows="3" placeholder="请填写现场实测值、观察现象和处理结果">' + escapeHtml(data.measured_value || "") + '</textarea>',
+      renderRecordExample(item),
       '<div class="short-warning ' + (shouldWarnShort(data.measured_value) ? "" : "hidden") + '" id="warn_' + item.id + '">当前描述偏简单，建议补充“实测值/观察现象/处理结果”。</div>',
       '</label>',
       '<div class="upload-grid">',
@@ -390,6 +541,29 @@
       '</div>',
       '</article>'
     ].join("");
+  }
+
+  function renderRecordExample(item) {
+    const blocks = item.record_example_blocks || [];
+    if (!blocks.length && !item.record_example) return "";
+    if (!blocks.length) {
+      return '<div class="record-example"><strong>Excel填写示例</strong><p>' + escapeHtml(item.record_example) + '</p></div>';
+    }
+    return '<div class="record-example"><strong>Excel填写示例</strong><div class="record-example-blocks">' + blocks.map(function (block) {
+      if (block.type === "note") return '<p class="record-example-note">' + escapeHtml(block.text || "") + '</p>';
+      const fields = block.fields || [];
+      return '<section class="record-example-section' + (block.layout === "stacked" ? ' is-stacked' : '') + '">' + (block.title ? '<h4>' + escapeHtml(block.title) + '</h4>' : '') + '<dl>' + fields.map(function (field) {
+        return '<div><dt>' + escapeHtml(field.label || "") + '</dt><dd>' + escapeHtml(field.value || "") + '</dd></div>';
+      }).join("") + '</dl></section>';
+    }).join("") + '</div></div>';
+  }
+
+  function renderReferenceMaterials(item) {
+    const images = item.reference_images || [];
+    if (!images.length) return "";
+    return '<div class="reference-images"><span>Excel参考图片</span><div>' + images.map(function (image) {
+      return '<a href="' + escapeHtml(image.src || "") + '" target="_blank" rel="noopener"><img src="' + escapeHtml(image.src || "") + '" alt="' + escapeHtml(image.label || "Excel参考图片") + '"><small>' + escapeHtml(image.label || "参考图") + '</small></a>';
+    }).join("") + '</div></div>';
   }
 
   function renderSupplementBadge(supplement) {
@@ -449,6 +623,8 @@
     const images = data[field] || [];
     const label = FIELD_LABELS[field];
     const hasError = hasItemFieldError(item.id, field);
+    const limit = Number(state.limits.max_images_per_field || 5);
+    const atLimit = images.length >= limit;
     const thumbs = images.length ? images.map(function (image, index) {
       return [
         '<div class="thumb" title="' + escapeHtml(image.original_name || "") + '">',
@@ -457,17 +633,19 @@
         '<button type="button" data-delete-image data-item-id="' + item.id + '" data-field="' + field + '" data-index="' + index + '">×</button>',
         '</div>'
       ].join("");
-    }).join("") : '<div class="empty-upload">未上传</div>';
+    }).join("") : '<div class="empty-upload">上传照片或将图片拖到此处</div>';
 
     return [
       '<div class="upload-zone' + (hasError ? " has-error" : "") + '" data-item-id="' + item.id + '" data-field="' + field + '">',
       '<div class="upload-head">',
       '<span class="upload-label">' + label + '（' + (required ? "必传" : "选传") + '）</span>',
-      '<button type="button" data-upload data-item-id="' + item.id + '" data-field="' + field + '">上传</button>',
+      '<span class="upload-count">' + images.length + ' / ' + limit + '</span>',
+      '<button type="button" data-upload data-item-id="' + item.id + '" data-field="' + field + '"' + (atLimit ? " disabled" : "") + '>上传照片</button>',
       '</div>',
       '<div class="thumb-grid">',
       thumbs,
       '</div>',
+      atLimit ? '<p class="upload-limit-note">已达到最多 ' + limit + ' 张。</p>' : '',
       '</div>'
     ].join("");
   }
@@ -539,6 +717,32 @@
     return values;
   }
 
+  function normalizeProject(value) {
+    return String(value || "").toUpperCase().replace(/[\s\-_（）()]/g, "");
+  }
+
+  function isUltrasoundContext() {
+    const base = getBaseInfo();
+    const special = (window.APP_CONFIG && window.APP_CONFIG.ultrasoundProjects) || [];
+    return base.model === "CL-8000i" && special.map(normalizeProject).indexOf(normalizeProject(base.jump_project)) !== -1;
+  }
+
+  function getSortedItems() {
+    const base = getBaseInfo();
+    const ultrasound = isUltrasoundContext();
+    return state.items.filter(function (item) {
+      const condition = item.condition || {};
+      if (condition.models && condition.models.indexOf(base.model) === -1) return false;
+      return !(condition.ultrasound_only && !ultrasound);
+    }).map(function (item) {
+      const copy = Object.assign({}, item);
+      copy.display_step = ultrasound ? (item.display_step_special || item.display_step) : (item.display_step_default || item.display_step);
+      return copy;
+    }).sort(function (a, b) {
+      return Number(a.sort_order || a.index || 0) - Number(b.sort_order || b.index || 0);
+    });
+  }
+
   function setBaseInfo(values) {
     document.querySelectorAll("#basicForm [name]").forEach(function (node) {
       node.value = values && values[node.name] ? values[node.name] : "";
@@ -546,10 +750,11 @@
         node.value = localDateString();
       }
     });
+    syncJumpProjectControl(values && values.jump_project);
   }
 
   function collectPayload() {
-    const items = state.items.map(function (item) {
+    const items = getSortedItems().map(function (item) {
       const data = ensureItemData(item.id);
       return {
         id: item.id,
@@ -580,9 +785,14 @@
       state.mobile.token = data.token || "";
       state.mobile.url = data.mobile_url || "";
       state.mobile.lastSeq = 0;
+      document.getElementById("mobilePanel").classList.remove("hidden");
       document.getElementById("mobileQrPanel").classList.remove("hidden");
       document.getElementById("mobileCopyBtn").classList.remove("hidden");
-      document.getElementById("mobileQrImage").src = (data.qr_url || "") + "?_=" + Date.now();
+      document.getElementById("mobilePanelCollapseBtn").classList.remove("hidden");
+      document.getElementById("mobilePanelCollapseBtn").textContent = "收起";
+      document.getElementById("mobilePanelCollapseBtn").setAttribute("aria-expanded", "true");
+      const qrUrl = data.qr_url || "";
+      document.getElementById("mobileQrImage").src = qrUrl + (qrUrl.includes("?") ? "&" : "?") + "_=" + Date.now();
       const link = document.getElementById("mobileLink");
       link.href = state.mobile.url;
       link.textContent = state.mobile.url;
@@ -610,6 +820,17 @@
   function setMobileStatus(text) {
     const node = document.getElementById("mobileStatusText");
     if (node) node.textContent = text;
+    const stateNode = document.getElementById("mobilePanelState");
+    if (stateNode) stateNode.textContent = "手机采集：" + text;
+  }
+
+  function toggleMobilePanel() {
+    const panel = document.getElementById("mobileQrPanel");
+    const button = document.getElementById("mobilePanelCollapseBtn");
+    const collapsed = !panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", collapsed);
+    button.textContent = collapsed ? "展开" : "收起";
+    button.setAttribute("aria-expanded", collapsed ? "false" : "true");
   }
 
   function startMobilePolling() {
@@ -672,7 +893,7 @@
     let missingImages = 0;
     let attention = 0;
 
-    state.items.forEach(function (item) {
+    getSortedItems().forEach(function (item) {
       const data = ensureItemData(item.id);
       let done = true;
       if (item.record_required && (data.measured_value || "").trim().length < 2) {
@@ -692,7 +913,7 @@
       if (done) completed += 1;
     });
 
-    const total = state.items.length;
+    const total = getSortedItems().length;
     const todo = Math.max(total - completed, 0);
     const percent = total ? Math.round((completed / total) * 100) : 0;
 
@@ -704,6 +925,204 @@
     if (attentionNode) attentionNode.textContent = attention;
     document.getElementById("statPercent").textContent = percent + "%";
     document.getElementById("progressBar").style.width = percent + "%";
+    const bottom = document.getElementById("itemBottomStats");
+    if (bottom) bottom.textContent = "已完成 " + completed + " / " + total + "｜缺照片 " + missingImages + "｜异常关注 " + attention;
+    renderItemNavigator();
+    updateBasicInfoState();
+  }
+
+  function isItemComplete(item) {
+    const data = ensureItemData(item.id);
+    if (item.record_required && String(data.measured_value || "").trim().length < 2) return false;
+    if (item.before_required && !(data.before_images || []).length) return false;
+    if (item.after_required && !(data.after_images || []).length) return false;
+    return true;
+  }
+
+  function getItemStatus(item) {
+    const data = ensureItemData(item.id);
+    const missingRecord = Boolean(item.record_required && String(data.measured_value || "").trim().length < 2);
+    const missingImage = Boolean((item.before_required && !(data.before_images || []).length) || (item.after_required && !(data.after_images || []).length));
+    const attention = ["异常", "已处理", "待确认"].indexOf(data.conclusion || "正常") !== -1;
+    const supplement = Boolean(state.supplementMap[item.id]);
+    const error = state.errorItemIds.has(item.id);
+    let kind = "complete";
+    let label = "已完成";
+    let icon = "✓";
+    if (supplement) { kind = "supplement"; label = "RTS/GTS需补充"; icon = "↩"; }
+    else if (error || missingRecord || missingImage) { kind = "missing"; label = missingRecord && missingImage ? "缺记录和照片" : (missingRecord ? "缺记录" : "缺照片"); icon = "!"; }
+    else if (attention) { kind = "attention"; label = data.conclusion || "异常关注"; icon = "●"; }
+    else if (!isItemComplete(item)) { kind = "todo"; label = "未完成"; icon = "○"; }
+    return { kind: kind, label: label, icon: icon, missingRecord: missingRecord, missingImage: missingImage, attention: attention, supplement: supplement, error: error };
+  }
+
+  function getFilteredItems() {
+    return getSortedItems().filter(function (item) {
+      const status = getItemStatus(item);
+      if (state.itemFilter === "todo") return !isItemComplete(item);
+      if (state.itemFilter === "missing_record") return status.missingRecord;
+      if (state.itemFilter === "missing_image") return status.missingImage;
+      if (state.itemFilter === "attention") return status.attention;
+      if (state.itemFilter === "supplement") return status.supplement;
+      return true;
+    });
+    state.basicCollapsed = false;
+    updateBasicInfoState();
+  }
+
+  function getDefaultActiveItemId(items) {
+    const sorted = items || getSortedItems();
+    const error = sorted.find(function (item) { return state.errorItemIds.has(item.id); });
+    const todo = sorted.find(function (item) { return !isItemComplete(item); });
+    return (error || todo || sorted[0] || {}).id || "";
+  }
+
+  function renderItemNavigator() {
+    const filterRoot = document.getElementById("itemFilterBar");
+    const listRoot = document.getElementById("itemNavigationList");
+    const countNode = document.getElementById("itemNavigatorCount");
+    if (!filterRoot || !listRoot) return;
+    const sorted = getSortedItems();
+    const counts = { all: sorted.length, todo: 0, missing_record: 0, missing_image: 0, attention: 0, supplement: 0 };
+    sorted.forEach(function (item) {
+      const status = getItemStatus(item);
+      if (!isItemComplete(item)) counts.todo += 1;
+      if (status.missingRecord) counts.missing_record += 1;
+      if (status.missingImage) counts.missing_image += 1;
+      if (status.attention) counts.attention += 1;
+      if (status.supplement) counts.supplement += 1;
+    });
+    const filterLabels = { all: "全部", todo: "未完成", missing_record: "缺记录", missing_image: "缺照片", attention: "异常关注", supplement: "RTS补充" };
+    filterRoot.innerHTML = Object.keys(filterLabels).map(function (key) {
+      const active = state.itemFilter === key;
+      return '<button type="button" class="item-filter-btn' + (active ? " active" : "") + '" data-item-filter="' + key + '" aria-pressed="' + (active ? "true" : "false") + '"><span>' + filterLabels[key] + '</span><b>' + counts[key] + '</b></button>';
+    }).join("");
+    const visible = getFilteredItems();
+    countNode.textContent = visible.length + " / " + sorted.length + " 项";
+    if (!visible.length) {
+      listRoot.innerHTML = '<div class="empty-state">当前筛选没有项目。<button type="button" data-item-filter="all">查看全部</button></div>';
+      return;
+    }
+    listRoot.innerHTML = visible.map(function (item) {
+      const status = getItemStatus(item);
+      const active = item.id === state.activeItemId;
+      return '<button type="button" class="item-navigation-entry' + (active ? " is-active" : "") + '" data-item-nav="' + escapeHtml(item.id) + '" aria-current="' + (active ? "step" : "false") + '"><span class="navigator-step status-' + status.kind + '">' + (active ? "▶" : status.icon) + '</span><span><span class="navigator-title" title="' + escapeHtml(item.action || "未命名排查项") + '">' + escapeHtml(item.display_step || item.step || "") + "｜" + escapeHtml(item.action || "未命名排查项") + '</span><span class="navigator-status">' + escapeHtml(status.label) + '</span></span></button>';
+    }).join("");
+  }
+
+  function updateCurrentItemUI() {
+    const filtered = getFilteredItems();
+    document.querySelectorAll(".item-card").forEach(function (card) {
+      const active = card.dataset.itemId === state.activeItemId;
+      card.classList.toggle("is-active", active);
+      card.classList.toggle("hidden", !active);
+      if (active) {
+        const item = getSortedItems().find(function (entry) { return entry.id === state.activeItemId; });
+        if (item) {
+          const status = getItemStatus(item);
+          card.dataset.status = status.kind;
+          card.classList.toggle("has-error", status.error);
+          card.classList.toggle("needs-supplement", status.supplement);
+          card.querySelectorAll(".conclusion-segment").forEach(function (button) {
+            const selected = button.dataset.conclusion === ensureItemData(item.id).conclusion;
+            button.classList.toggle("selected", selected);
+            button.setAttribute("aria-pressed", selected ? "true" : "false");
+          });
+        }
+      }
+    });
+    document.querySelectorAll("[data-item-nav]").forEach(function (button) {
+      const active = button.dataset.itemNav === state.activeItemId;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-current", active ? "step" : "false");
+    });
+    const position = getSortedItems().findIndex(function (item) { return item.id === state.activeItemId; });
+    const positionNode = document.getElementById("itemPositionText");
+    if (positionNode) positionNode.textContent = "第 " + (position >= 0 ? position + 1 : 0) + " / " + getSortedItems().length + " 项";
+    const previous = document.getElementById("previousItemBtn");
+    const next = document.getElementById("nextItemBtn");
+    if (previous) previous.disabled = filtered.length < 2;
+    if (next) next.disabled = filtered.length < 2;
+  }
+
+  function setActiveItem(itemId, options) {
+    if (!itemId || !getSortedItems().some(function (item) { return item.id === itemId; })) return;
+    state.activeItemId = itemId;
+    renderItemNavigator();
+    updateCurrentItemUI();
+    refreshShortWarning(itemId);
+    if (options && options.scroll) {
+      const panel = document.getElementById("itemDetailPanel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function setItemFilter(filter) {
+    state.itemFilter = filter || "all";
+    state.supplementOnly = state.itemFilter === "supplement";
+    const filtered = getFilteredItems();
+    if (!filtered.length) state.activeItemId = "";
+    else if (!filtered.some(function (item) { return item.id === state.activeItemId; })) state.activeItemId = filtered[0].id;
+    renderItemNavigator();
+    updateCurrentItemUI();
+  }
+
+  function moveActiveItem(delta) {
+    const items = getFilteredItems();
+    if (!items.length) return;
+    let index = items.findIndex(function (item) { return item.id === state.activeItemId; });
+    if (index < 0) index = 0;
+    index = (index + delta + items.length) % items.length;
+    setActiveItem(items[index].id, { scroll: true });
+  }
+
+  function goToNextTodo() {
+    const sorted = getSortedItems();
+    const buckets = [
+      function (item) { return getItemStatus(item).supplement; },
+      function (item) { return getItemStatus(item).error; },
+      function (item) { return getItemStatus(item).missingRecord; },
+      function (item) { return getItemStatus(item).missingImage; },
+      function (item) { return !isItemComplete(item); },
+      function (item) { return getItemStatus(item).attention; }
+    ];
+    let target = null;
+    buckets.some(function (test) { target = sorted.find(test); return Boolean(target); });
+    if (!target) {
+      showResult("当前没有待办项。", false);
+      return;
+    }
+    if (getItemStatus(target).supplement) state.itemFilter = "supplement";
+    else if (!getFilteredItems().some(function (item) { return item.id === target.id; })) state.itemFilter = "all";
+    setActiveItem(target.id, { scroll: true });
+  }
+
+  function updateBasicInfoState() {
+    const section = document.getElementById("basicInfoSection");
+    const status = document.getElementById("basicInfoStatus");
+    const toggle = document.getElementById("basicInfoToggleBtn");
+    const summary = document.getElementById("basicInfoSummary");
+    if (!section || !status || !toggle || !summary) return;
+    const values = getBaseInfo();
+    const required = (window.APP_CONFIG && window.APP_CONFIG.basicFields || []).filter(function (field) { return field.required; });
+    const complete = required.every(function (field) { return String(values[field.key] || "").trim(); });
+    status.textContent = complete ? "已完成" : "未完成";
+    status.className = "tag " + (complete ? "is-complete" : "is-incomplete");
+    toggle.disabled = !complete;
+    toggle.textContent = complete ? (state.basicCollapsed ? "编辑" : "收起") : "请先完成必填项";
+    if (!complete) state.basicCollapsed = false;
+    section.classList.toggle("is-collapsed", state.basicCollapsed && complete);
+    toggle.setAttribute("aria-expanded", state.basicCollapsed ? "false" : "true");
+    summary.innerHTML = '<strong>' + escapeHtml(values.hospital || "医院名称") + " · " + escapeHtml(values.model || "设备型号") + " · " + escapeHtml(values.serial || "设备序列号") + '</strong><br>' + escapeHtml(values.jump_project || "跳值项目") + " · " + escapeHtml(values.engineer || "排查工程师") + " · " + escapeHtml(values.check_date || "排查日期");
+    summary.classList.toggle("hidden", !state.basicCollapsed || !complete);
+  }
+
+  function toggleBasicInfo() {
+    const values = getBaseInfo();
+    const required = (window.APP_CONFIG && window.APP_CONFIG.basicFields || []).filter(function (field) { return field.required; });
+    if (!required.every(function (field) { return String(values[field.key] || "").trim(); })) return;
+    state.basicCollapsed = !state.basicCollapsed;
+    updateBasicInfoState();
   }
 
   function showResult(message, isError, links, reveal) {
@@ -733,9 +1152,10 @@
   function applyBaseFieldErrors() {
     document.querySelectorAll("#basicForm .field").forEach(function (fieldNode) {
       const control = fieldNode.querySelector("[name]");
+      const visibleControl = fieldNode.querySelector("[data-project-select]") || control;
       const hasError = Boolean(control && state.errorFields.has(control.name));
       fieldNode.classList.toggle("has-error", hasError);
-      if (control) control.classList.toggle("has-error", hasError);
+      if (visibleControl) visibleControl.classList.toggle("has-error", hasError);
     });
   }
 
@@ -757,6 +1177,8 @@
 
   function focusErrorTarget(itemId, field) {
     if (itemId) {
+      if (!getFilteredItems().some(function (item) { return item.id === itemId; })) state.itemFilter = "all";
+      setActiveItem(itemId, { scroll: false });
       const itemNode = document.getElementById(itemId);
       if (field === "measured_value") {
         const textarea = document.querySelector(".item-textarea[data-item-id='" + itemId + "']");
@@ -773,7 +1195,9 @@
     }
 
     if (field) {
-      const fieldNode = document.querySelector("#basicForm [name='" + field + "']");
+      state.basicCollapsed = false;
+      updateBasicInfoState();
+      const fieldNode = field === "jump_project" ? document.getElementById("base_jump_project_select") : document.querySelector("#basicForm [name='" + field + "']");
       const wrapper = fieldNode ? fieldNode.closest(".field") : null;
       focusWithPulse(wrapper || fieldNode, fieldNode);
     }
@@ -804,10 +1228,29 @@
       return;
     }
 
-    list.innerHTML = errors.map(function (err, index) {
+    const counts = { base: 0, record: 0, image: 0 };
+    (errors || []).forEach(function (err) {
+      if (!err.item_id) counts.base += 1;
+      else if (err.field === "measured_value") counts.record += 1;
+      else if (err.field === "before_images" || err.field === "after_images") counts.image += 1;
+    });
+    list.innerHTML = '<div class="error-summary"><div><h2>发现 ' + errors.length + ' 处未完成内容</h2><div class="error-breakdown"><span>基础信息 ' + counts.base + ' 项</span><span>缺记录 ' + counts.record + ' 项</span><span>缺照片 ' + counts.image + ' 项</span></div></div><div><button type="button" data-focus-first>定位第一处</button><button type="button" data-toggle-errors>展开错误列表</button></div></div><div class="error-details hidden">' + errors.map(function (err, index) {
       return '<button type="button" class="error-item" data-error-target="' + escapeHtml(err.item_id || "") + '" data-error-field="' + escapeHtml(err.field || "") + '">' + (index + 1) + ". " + escapeHtml(err.message) + '</button>';
-    }).join("");
+    }).join("") + '</div>';
     panel.classList.remove("hidden");
+
+    const details = list.querySelector(".error-details");
+    const toggle = list.querySelector("[data-toggle-errors]");
+    const firstButton = list.querySelector("[data-focus-first]");
+    if (toggle) toggle.addEventListener("click", function () {
+      const willShow = details.classList.contains("hidden");
+      details.classList.toggle("hidden", !willShow);
+      toggle.textContent = willShow ? "收起错误列表" : "展开错误列表";
+    });
+    if (firstButton) firstButton.addEventListener("click", function () {
+      const first = errors[0];
+      if (first) focusErrorTarget(first.item_id || "", first.field || "");
+    });
 
     list.querySelectorAll("[data-error-target], [data-error-field]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -930,6 +1373,9 @@
       state.items.forEach(function (item) {
         ensureItemData(item.id);
       });
+      state.itemFilter = "all";
+      state.supplementOnly = false;
+      state.activeItemId = getDefaultActiveItemId();
       renderItems();
       updateStats();
       showResult("草稿已导入。", false);
@@ -971,6 +1417,9 @@
       state.items.forEach(function (item) {
         ensureItemData(item.id);
       });
+      state.itemFilter = "all";
+      state.supplementOnly = false;
+      state.activeItemId = getDefaultActiveItemId();
       renderItems();
       updateStats();
       const warningText = (data.warnings || []).length ? "，有 " + data.warnings.length + " 张图片未能恢复，请检查提示或重新上传" : "";
@@ -1021,11 +1470,9 @@
 
     list.querySelectorAll("[data-item-id]").forEach(function (button) {
       button.addEventListener("click", function () {
-        state.supplementOnly = false;
-        renderItems();
-        window.setTimeout(function () {
-          focusErrorTarget(button.dataset.itemId, "");
-        }, 60);
+        state.supplementOnly = true;
+        state.itemFilter = "supplement";
+        setActiveItem(button.dataset.itemId, { scroll: true });
       });
     });
   }
@@ -1047,6 +1494,8 @@
       state.supplementRequests = data.supplement_requests || [];
       rebuildSupplementMap();
       state.supplementOnly = Boolean(state.supplementRequests.length);
+      state.itemFilter = state.supplementOnly ? "supplement" : "all";
+      state.activeItemId = state.supplementOnly ? (state.supplementRequests[0] || {}).item_id || getDefaultActiveItemId() : getDefaultActiveItemId();
       renderSupplementPanel(data);
       renderItems();
       updateStats();
@@ -1062,6 +1511,11 @@
       showResult(message, true);
       finishBusy("error", "RTS/GTS返回ZIP导入失败", message);
     }
+  }
+
+  function renderConclusionSegment(itemId, current, value) {
+    const selected = (current || "正常") === value;
+    return '<button type="button" class="conclusion-segment' + (selected ? " selected" : "") + '" data-conclusion="' + value + '" data-item-id="' + escapeHtml(itemId) + '" aria-pressed="' + (selected ? "true" : "false") + '">' + value + '</button>';
   }
 
   function restoreEditableReport(data) {
@@ -1093,6 +1547,7 @@
 
     const errors = [];
     state.supplementOnly = true;
+    state.itemFilter = "supplement";
     state.supplementRequests.forEach(function (request) {
       const item = findTemplateItem(request.item_id);
       const label = (request.display_step || request.item_id) + "：" + (request.action || "");

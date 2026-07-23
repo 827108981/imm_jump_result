@@ -1,11 +1,10 @@
-请将正式 Excel 模板放在本目录，文件名必须为：
+当前唯一业务标准文件：
 
-免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx
+M1武汉市第八医院-双大客户仪器故障反馈和排查表-20250412.xlsx
 
-模板 sheet 名必须为：
+更新该 Excel 后，依次执行：
 
-用服工程师排查反馈表
+python build_offline_html.py
+python build_release.py
 
-如果只是想先跑通演示流程，可以在项目根目录执行：
-
-python create_sample_template.py
+程序会从该文件读取机型、项目、排查项、实测记录示例和嵌入参考图片。

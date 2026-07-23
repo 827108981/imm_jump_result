@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import hashlib
 import io
+import ipaddress
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -14,18 +16,33 @@ import uuid
 import webbrowser
 import zipfile
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
+from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
+from werkzeug.serving import make_server
+
+from reference_assets import extract_reference_assets
+from template_catalog import (
+    MODELS,
+    SHEET_NAME,
+    ULTRASOUND_PROJECTS,
+    WORKBOOK_NAME,
+    build_template_items,
+    get_project_options,
+    prepare_items_for_context,
+)
 
 
 APP_NAME = "免疫跳值排查反馈报告生成工具"
-VERSION = "V1.7"
-SHEET_NAME = "用服工程师排查反馈表"
-TEMPLATE_NAME = "免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx"
+VERSION = "V2.0.5"
+TEMPLATE_NAME = WORKBOOK_NAME
 PACKAGE_FORMAT_VERSION = "frontline-report-v2"
 ZIP_MAX_BYTES = 500 * 1024 * 1024
+ZIP_MAX_FILES = 2000
+ZIP_MAX_EXTRACTED_BYTES = ZIP_MAX_BYTES
+JSON_MAX_BYTES = 20 * 1024 * 1024
 
 SOURCE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
@@ -41,13 +58,17 @@ RTS_UPLOADS_DIR = UPLOADS_DIR / "rts_reviews"
 MOBILE_TASKS_DIR = APP_DIR / "mobile_tasks"
 MOBILE_CHUNKS_DIR = APP_DIR / "mobile_upload_chunks"
 TEMPLATE_PATH = RESOURCES_DIR / TEMPLATE_NAME
+REFERENCE_DIR = SOURCE_DIR / "static" / "reference"
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
+MAX_SOURCE_IMAGE_SIZE = 100 * 1024 * 1024
 IMAGE_COMPRESS_TARGET_SIZE = 2 * 1024 * 1024
-MAX_IMAGES_PER_FIELD = 5
+MAX_IMAGES_PER_FIELD = 7
 MOBILE_TASK_TTL_SECONDS = 8 * 60 * 60
 MOBILE_CHUNK_SIZE = 512 * 1024
+MOBILE_MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+MOBILE_MAX_CHUNKS = math.ceil(MOBILE_MAX_UPLOAD_SIZE / MOBILE_CHUNK_SIZE)
 
 CONCLUSION_OPTIONS = {
     "normal": "正常",
@@ -80,17 +101,23 @@ REQUIRED_COLUMNS = [
     "调试或维护后照片",
 ]
 
-BASIC_FIELDS = [
+def build_basic_fields():
+    projects = get_project_options(TEMPLATE_PATH) if TEMPLATE_PATH.exists() else []
+    return [
     {"key": "hospital", "label": "医院名称", "required": True},
-    {"key": "model", "label": "设备型号", "required": True},
+    {"key": "model", "label": "设备型号", "required": True, "options": MODELS},
     {"key": "serial", "label": "设备序列号", "required": True},
     {"key": "software", "label": "软件版本", "required": True},
-    {"key": "jump_project", "label": "跳值项目", "required": True},
+    {"key": "jump_project", "label": "跳值项目", "required": True, "options": projects, "allow_custom": True},
     {"key": "problem", "label": "问题描述", "required": True},
     {"key": "engineer", "label": "排查工程师", "required": True},
     {"key": "check_date", "label": "排查日期", "required": True},
     {"key": "contact", "label": "联系方式", "required": False},
-]
+    ]
+
+
+BASIC_FIELDS = build_basic_fields()
+_TEMPLATE_CACHE = None
 
 
 app = Flask(
@@ -99,6 +126,37 @@ app = Flask(
     static_folder=str(SOURCE_DIR / "static"),
 )
 app.config["MAX_CONTENT_LENGTH"] = ZIP_MAX_BYTES + 20 * 1024 * 1024
+
+
+def ensure_ui_assets_available():
+    """Fail clearly when someone runs an incomplete desktop delivery folder."""
+    required = [
+        SOURCE_DIR / "templates" / "index.html",
+        SOURCE_DIR / "templates" / "mobile.html",
+        SOURCE_DIR / "templates" / "rts_review.html",
+        SOURCE_DIR / "static" / "css" / "style.css",
+        SOURCE_DIR / "static" / "css" / "mobile.css",
+        SOURCE_DIR / "static" / "js" / "app.js",
+        SOURCE_DIR / "static" / "js" / "mobile.js",
+        SOURCE_DIR / "static" / "js" / "rts_review.js",
+        TEMPLATE_PATH,
+    ]
+    missing = [path.name for path in required if not path.is_file()]
+    if not missing:
+        return
+
+    message = (
+        "程序文件不完整，缺少界面资源：%s。\n\n"
+        "请完整解压并运行 %s 发布包内的 EXE，不要只复制 EXE 文件。"
+    ) % ("、".join(missing), VERSION)
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(0, message, APP_NAME, 0x10)
+        except Exception:
+            pass
+    raise RuntimeError(message)
 
 
 class UserFacingError(Exception):
@@ -271,6 +329,65 @@ def safe_name(value, fallback="未命名"):
     return text[:80] or fallback
 
 
+def safe_path_segment(value, label="路径"):
+    text = normalize_text(value)
+    if not text or safe_name(text, "") != text:
+        raise UserFacingError("%s无效。" % label, 404)
+    return text
+
+
+def contained_path(root, *parts, label="路径"):
+    root = Path(root).resolve()
+    path = root.joinpath(*parts).resolve()
+    if root != path and root not in path.parents:
+        raise UserFacingError("%s异常。" % label, 404)
+    return path
+
+
+def write_json_atomic(path, payload):
+    path = Path(path)
+    temp_path = path.with_name(".%s.%s.tmp" % (path.name, uuid.uuid4().hex))
+    try:
+        temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(str(temp_path), str(path))
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+def request_is_loopback():
+    address = normalize_text(request.remote_addr).split("%", 1)[0]
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if isinstance(parsed, ipaddress.IPv6Address) and parsed.ipv4_mapped:
+        parsed = parsed.ipv4_mapped
+    return parsed.is_loopback
+
+
+REMOTE_MOBILE_ENDPOINTS = {
+    "static",
+    "mobile_page",
+    "mobile_offline_preview",
+    "mobile_offline_download",
+    "api_mobile_task",
+    "api_mobile_item_save",
+    "api_mobile_upload",
+    "api_mobile_upload_chunk_status",
+    "api_mobile_upload_chunk",
+    "api_mobile_upload_complete",
+    "api_mobile_task_status",
+    "uploaded_file",
+}
+
+
+@app.before_request
+def restrict_desktop_routes_to_local_machine():
+    if request_is_loopback() or request.endpoint in REMOTE_MOBILE_ENDPOINTS:
+        return None
+    return jsonify({"ok": False, "message": "该功能仅允许在运行程序的电脑上使用。"}), 403
+
+
 def template_required(value):
     return not is_na(value)
 
@@ -305,6 +422,24 @@ def import_openpyxl():
 
 
 def read_excel_template():
+    """Load the current Excel catalogue and its step-level reference images.
+
+    The generated references are tiny JPEGs kept in ``static/reference`` for the
+    desktop app.  The release builder embeds the same files into the single
+    offline HTML, so field engineers do not need a network connection.
+    """
+    global _TEMPLATE_CACHE
+    if _TEMPLATE_CACHE is not None:
+        return json.loads(json.dumps(_TEMPLATE_CACHE, ensure_ascii=False))
+    if not TEMPLATE_PATH.exists():
+        raise UserFacingError("未找到最新版排查反馈表，请确认 resources 目录中包含标准 Excel。", 404)
+    references = extract_reference_assets(TEMPLATE_PATH, REFERENCE_DIR)
+    _TEMPLATE_CACHE = build_template_items(TEMPLATE_PATH, references)
+    logging.info("latest template loaded: %s items from %s", len(_TEMPLATE_CACHE), TEMPLATE_PATH)
+    return json.loads(json.dumps(_TEMPLATE_CACHE, ensure_ascii=False))
+
+
+def read_legacy_excel_template():
     if not TEMPLATE_PATH.exists():
         raise UserFacingError("未找到排查反馈表模板，请确认模板文件是否存在。", 404)
 
@@ -441,7 +576,11 @@ def read_excel_template():
 
 
 def group_items(items):
-    return [{"category": "排查步骤（1-36，第35步含4项）", "items": sorted(items, key=lambda item: item.get("sort_order") or item.get("index") or 0)}]
+    return [{"category": "排查步骤", "items": sorted(items, key=lambda item: item.get("sort_order") or item.get("index") or 0)}]
+
+
+def template_items_for_base_info(base_info):
+    return prepare_items_for_context(read_excel_template(), base_info or {})
 
 
 def get_payload_item_map(payload_items):
@@ -771,6 +910,9 @@ def build_zip(output_dir, zip_path):
             if path == zip_path or path.is_dir():
                 continue
             archive.write(str(path), str(path.relative_to(output_dir)))
+    if zip_path.stat().st_size > ZIP_MAX_BYTES:
+        zip_path.unlink(missing_ok=True)
+        raise UserFacingError("生成的 ZIP 超过 500MB，请减少照片后重试。")
 
 
 def make_public_output_path(path):
@@ -810,7 +952,7 @@ def load_mobile_task(task_id):
 
 def save_mobile_task(task):
     path = mobile_task_path(task.get("task_id"))
-    path.write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_atomic(path, task)
 
 
 def assert_mobile_task_token(task, token):
@@ -825,6 +967,11 @@ def assert_mobile_task_token(task, token):
 
 
 def find_payload_item(task, item_id):
+    allowed_item_ids = set(task.get("allowed_item_ids") or [])
+    if not allowed_item_ids:
+        allowed_item_ids = {item.get("id") for item in template_items_for_base_info(task.get("base_info") or {})}
+    if item_id not in allowed_item_ids:
+        raise UserFacingError("排查项无效，请在电脑端重新生成二维码。", 400)
     for item in task.get("items") or []:
         if item.get("id") == item_id:
             return item
@@ -886,7 +1033,7 @@ def save_chunk_metadata(task_id, upload_id, metadata):
     upload_dir = mobile_chunk_upload_dir(task_id, upload_id)
     upload_dir.mkdir(parents=True, exist_ok=True)
     (upload_dir / "chunks").mkdir(parents=True, exist_ok=True)
-    chunk_metadata_path(task_id, upload_id).write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_json_atomic(chunk_metadata_path(task_id, upload_id), metadata)
 
 
 def parse_positive_int(value, label, minimum=1, maximum=None):
@@ -899,6 +1046,16 @@ def parse_positive_int(value, label, minimum=1, maximum=None):
     if maximum is not None and number > maximum:
         raise UserFacingError("%s超出限制。" % label, 400)
     return number
+
+
+def validate_mobile_chunk_plan(original_size, processed_size, chunk_count):
+    if original_size > MAX_SOURCE_IMAGE_SIZE:
+        raise UserFacingError("单张原始图片超过 100MB，请先压缩后重新上传。", 400)
+    if processed_size > MOBILE_MAX_UPLOAD_SIZE:
+        raise UserFacingError("手机处理后的图片超过 10MB，请重新选择照片。", 400)
+    expected_chunks = max(1, math.ceil(processed_size / MOBILE_CHUNK_SIZE))
+    if chunk_count != expected_chunks:
+        raise UserFacingError("照片分片信息不一致，请重新选择照片。", 400)
 
 
 def uploaded_chunk_indexes(task_id, upload_id):
@@ -964,6 +1121,10 @@ def create_mobile_task_from_payload(payload):
     task_id = "m_%s_%s" % (datetime.now().strftime("%Y%m%d%H%M%S"), uuid.uuid4().hex[:8])
     token = uuid.uuid4().hex + uuid.uuid4().hex
     mobile_url = build_mobile_url(task_id, token)
+    template_items = template_items_for_base_info(payload.get("base_info") or {})
+    allowed_item_ids = [item.get("id") for item in template_items if item.get("id")]
+    allowed_item_id_set = set(allowed_item_ids)
+    payload_items = [item for item in (payload.get("items") or []) if item.get("id") in allowed_item_id_set]
     task = {
         "task_id": task_id,
         "session_id": session_id,
@@ -977,7 +1138,8 @@ def create_mobile_task_from_payload(payload):
         "updated_seq": 0,
         "mobile_url": mobile_url,
         "base_info": payload.get("base_info") or {},
-        "items": payload.get("items") or [],
+        "allowed_item_ids": allowed_item_ids,
+        "items": payload_items,
     }
     save_mobile_task(task)
     return task, token
@@ -989,7 +1151,7 @@ def mobile_task_response(task, token):
         "task_id": task["task_id"],
         "token": token,
         "mobile_url": task["mobile_url"],
-        "qr_url": "/api/mobile/task/%s/qrcode" % task["task_id"],
+        "qr_url": "/api/mobile/task/%s/qrcode?token=%s" % (task["task_id"], token),
         "lan_ips": get_lan_ipv4_addresses(),
         "expires_at": task["expires_at"],
     }
@@ -1012,6 +1174,8 @@ def save_uploaded_files(session_id, files):
         file_storage.stream.seek(0, os.SEEK_END)
         original_size = file_storage.stream.tell()
         file_storage.stream.seek(0)
+        if original_size > MAX_SOURCE_IMAGE_SIZE:
+            raise UserFacingError("单张原始图片超过 100MB，请先压缩后重新上传。")
 
         ext = get_extension(original_name)
         base = Path(secure_filename(original_name)).stem or uuid.uuid4().hex
@@ -1048,6 +1212,9 @@ def register_uploaded_image(session_id, source_path, original_name, original_siz
     original_name = original_name or source_path.name
     if not allowed_file(original_name):
         raise UserFacingError("图片格式不支持，请上传 jpg、jpeg、png 或 webp 格式图片。")
+    if source_path.stat().st_size > MOBILE_MAX_UPLOAD_SIZE:
+        source_path.unlink(missing_ok=True)
+        raise UserFacingError("手机处理后的图片超过 10MB，请重新选择照片。")
 
     ext = get_extension(original_name) or get_extension(source_path.name) or "jpg"
     base = Path(secure_filename(original_name)).stem or uuid.uuid4().hex
@@ -1109,6 +1276,13 @@ def handle_user_error(exc):
     return jsonify({"ok": False, "message": exc.message}), exc.status_code
 
 
+@app.errorhandler(HTTPException)
+def handle_http_error(exc):
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "message": exc.description}), exc.code
+    return exc
+
+
 @app.errorhandler(Exception)
 def handle_unexpected_error(exc):
     logging.exception("unexpected error")
@@ -1123,6 +1297,7 @@ def index():
         version=VERSION,
         basic_fields=BASIC_FIELDS,
         template_name=TEMPLATE_NAME,
+        ultrasound_projects=ULTRASOUND_PROJECTS,
     )
 
 
@@ -1178,7 +1353,7 @@ def api_upload():
 @app.route("/api/check", methods=["POST"])
 def api_check():
     payload = request.get_json(force=True)
-    template_items = read_excel_template()
+    template_items = template_items_for_base_info(payload.get("base_info") or {})
     errors, stats, warnings = validate_submission(
         payload.get("base_info") or {},
         payload.get("items") or [],
@@ -1194,7 +1369,7 @@ def api_report():
     payload = request.get_json(force=True)
     base_info = payload.get("base_info") or {}
     payload_items = payload.get("items") or []
-    template_items = read_excel_template()
+    template_items = template_items_for_base_info(base_info)
     errors, stats, warnings = validate_submission(base_info, payload_items, template_items)
 
     if errors:
@@ -1350,6 +1525,7 @@ def api_mobile_task_create():
 @app.route("/api/mobile/task/<task_id>/qrcode")
 def api_mobile_task_qrcode(task_id):
     task = load_mobile_task(task_id)
+    assert_mobile_task_token(task, request.args.get("token") or "")
     try:
         import qrcode
     except ImportError:
@@ -1376,7 +1552,7 @@ def api_mobile_task():
             "task_id": task["task_id"],
             "session_id": task["session_id"],
             "base_info": task.get("base_info") or {},
-            "items": read_excel_template(),
+            "items": template_items_for_base_info(task.get("base_info") or {}),
             "item_data": task.get("items") or [],
             "updated_seq": task.get("updated_seq") or 0,
             "expires_at": task.get("expires_at") or "",
@@ -1462,9 +1638,15 @@ def api_mobile_upload_chunk():
         raise UserFacingError("上传任务无效。", 400)
 
     chunk_index = parse_positive_int(request.form.get("chunk_index"), "分片序号", minimum=0)
-    chunk_count = parse_positive_int(request.form.get("chunk_count"), "分片总数", minimum=1, maximum=10000)
-    original_size = parse_positive_int(request.form.get("original_size") or 1, "原始大小", minimum=1)
-    processed_size = parse_positive_int(request.form.get("processed_size") or original_size, "处理后大小", minimum=1)
+    chunk_count = parse_positive_int(request.form.get("chunk_count"), "分片总数", minimum=1, maximum=MOBILE_MAX_CHUNKS)
+    original_size = parse_positive_int(request.form.get("original_size") or 1, "原始大小", minimum=1, maximum=MAX_SOURCE_IMAGE_SIZE)
+    processed_size = parse_positive_int(
+        request.form.get("processed_size") or original_size,
+        "处理后大小",
+        minimum=1,
+        maximum=MOBILE_MAX_UPLOAD_SIZE,
+    )
+    validate_mobile_chunk_plan(original_size, processed_size, chunk_count)
     if chunk_index >= chunk_count:
         raise UserFacingError("分片序号超出范围。", 400)
 
@@ -1485,6 +1667,10 @@ def api_mobile_upload_chunk():
             raise UserFacingError("上传任务与排查项不匹配，请重新选择照片。", 400)
         if int(metadata.get("chunk_count") or chunk_count) != chunk_count:
             raise UserFacingError("上传分片信息不一致，请重新选择照片。", 400)
+        if int(metadata.get("original_size") or original_size) != original_size:
+            raise UserFacingError("原始图片大小不一致，请重新选择照片。", 400)
+        if int(metadata.get("processed_size") or processed_size) != processed_size:
+            raise UserFacingError("处理后图片大小不一致，请重新选择照片。", 400)
     else:
         metadata = {
             "task_id": task_id,
@@ -1501,6 +1687,10 @@ def api_mobile_upload_chunk():
 
     part_path = chunks_dir / ("%06d.part" % chunk_index)
     chunk_file.save(str(part_path))
+    expected_chunk_size = min(MOBILE_CHUNK_SIZE, processed_size - chunk_index * MOBILE_CHUNK_SIZE)
+    if part_path.stat().st_size != expected_chunk_size:
+        part_path.unlink(missing_ok=True)
+        raise UserFacingError("照片分片大小不正确，请重新上传。", 400)
     metadata["updated_at"] = iso_now()
     save_chunk_metadata(task_id, upload_id, metadata)
 
@@ -1539,13 +1729,27 @@ def api_mobile_upload_complete():
     if current_count >= MAX_IMAGES_PER_FIELD:
         raise UserFacingError("每个位置最多上传 %s 张照片，请删除多余图片后继续。" % MAX_IMAGES_PER_FIELD)
 
-    chunk_count = parse_positive_int(metadata.get("chunk_count"), "分片总数", minimum=1, maximum=10000)
+    chunk_count = parse_positive_int(metadata.get("chunk_count"), "分片总数", minimum=1, maximum=MOBILE_MAX_CHUNKS)
+    processed_size = parse_positive_int(
+        metadata.get("processed_size"),
+        "处理后大小",
+        minimum=1,
+        maximum=MOBILE_MAX_UPLOAD_SIZE,
+    )
+    validate_mobile_chunk_plan(
+        parse_positive_int(metadata.get("original_size"), "原始大小", minimum=1, maximum=MAX_SOURCE_IMAGE_SIZE),
+        processed_size,
+        chunk_count,
+    )
     uploaded = uploaded_chunk_indexes(task_id, upload_id)
     missing = [index for index in range(chunk_count) if index not in uploaded]
     if missing:
         return jsonify({"ok": False, "message": "照片分片未传完整。", "missing_chunks": missing[:50]}), 409
 
     upload_dir = mobile_chunk_upload_dir(task_id, upload_id)
+    actual_size = sum((upload_dir / "chunks" / ("%06d.part" % index)).stat().st_size for index in range(chunk_count))
+    if actual_size != processed_size:
+        raise UserFacingError("照片分片总大小不一致，请重新上传。", 400)
     merged_name = safe_name(Path(metadata.get("file_name") or "mobile_photo.jpg").stem, "mobile_photo") + "." + (
         get_extension(metadata.get("file_name") or "") or "jpg"
     )
@@ -1627,81 +1831,127 @@ RTS_REVIEW_FIELDS = {
 }
 
 
+def read_json_document(path, label):
+    path = Path(path)
+    if path.stat().st_size > JSON_MAX_BYTES:
+        raise UserFacingError("%s超过 20MB，无法导入。" % label)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise UserFacingError("%s内容损坏或格式不正确。" % label)
+    if not isinstance(data, dict):
+        raise UserFacingError("%s顶层必须是 JSON 对象。" % label)
+    return data
+
+
+def save_json_upload(file_storage, target, label):
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    total = 0
+    try:
+        file_storage.stream.seek(0)
+        with target.open("wb") as output:
+            while True:
+                chunk = file_storage.stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > JSON_MAX_BYTES:
+                    raise UserFacingError("%s超过 20MB，无法导入。" % label)
+                output.write(chunk)
+        return read_json_document(target, label)
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+
+
+def extract_json_package(zip_path, extract_root, required_json_name, label):
+    zip_path = Path(zip_path)
+    extract_root = Path(extract_root).resolve()
+    if zip_path.stat().st_size > ZIP_MAX_BYTES:
+        raise UserFacingError("ZIP 文件超过 500MB，无法导入。")
+
+    shutil.rmtree(extract_root, ignore_errors=True)
+    extract_root.mkdir(parents=True, exist_ok=True)
+    try:
+        with zipfile.ZipFile(str(zip_path), "r") as archive:
+            members = [member for member in archive.infolist() if not member.is_dir()]
+            if len(members) > ZIP_MAX_FILES:
+                raise UserFacingError("ZIP 文件数量超过 %s 个，无法导入。" % ZIP_MAX_FILES)
+
+            total_declared_size = 0
+            json_member = None
+            targets = set()
+            validated = []
+            for member in members:
+                member_name = member.filename.replace("\\", "/")
+                parts = PurePosixPath(member_name).parts
+                if not parts or ".." in parts or any(":" in part for part in parts):
+                    raise UserFacingError("ZIP 文件包含异常路径，请检查后重新上传。")
+                target = contained_path(extract_root, *parts, label="ZIP 文件路径")
+                target_key = str(target).casefold()
+                if target_key in targets:
+                    raise UserFacingError("ZIP 文件包含重复路径，请检查后重新上传。")
+                targets.add(target_key)
+                total_declared_size += max(int(member.file_size or 0), 0)
+                if total_declared_size > ZIP_MAX_EXTRACTED_BYTES:
+                    raise UserFacingError("ZIP 解压后超过 500MB，无法导入。")
+                if PurePosixPath(member_name).name == required_json_name:
+                    if json_member is not None:
+                        raise UserFacingError("ZIP 中包含多个 %s，无法确定有效数据。" % required_json_name)
+                    json_member = (member, target)
+                validated.append((member, target))
+
+            if json_member is None:
+                raise UserFacingError("%s中未找到 %s。" % (label, required_json_name))
+
+            total_written = 0
+            for member, target in validated:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(member) as source, target.open("wb") as output:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        total_written += len(chunk)
+                        if total_written > ZIP_MAX_EXTRACTED_BYTES:
+                            raise UserFacingError("ZIP 解压后超过 500MB，无法导入。")
+                        output.write(chunk)
+
+        return read_json_document(json_member[1], required_json_name), extract_root
+    except UserFacingError:
+        shutil.rmtree(extract_root, ignore_errors=True)
+        raise
+    except (OSError, RuntimeError, zipfile.BadZipFile, zipfile.LargeZipFile):
+        shutil.rmtree(extract_root, ignore_errors=True)
+        raise UserFacingError("%s损坏、加密或无法读取。" % label)
+
+
 def load_report_data_from_zip(zip_path, session_id):
     """Extract a front-line report ZIP safely and return report_data.json data plus session root."""
     extract_root = RTS_UPLOADS_DIR / session_id / "extracted"
-    extract_root.mkdir(parents=True, exist_ok=True)
-
-    with zipfile.ZipFile(str(zip_path), "r") as archive:
-        json_member = None
-        for member in archive.infolist():
-            member_name = member.filename.replace("\\", "/")
-            if member_name.endswith("/"):
-                continue
-            if ".." in Path(member_name).parts:
-                raise UserFacingError("ZIP 文件包含异常路径，请检查后重新上传。")
-            if Path(member_name).name == "report_data.json":
-                json_member = member_name
-            target = (extract_root / member_name).resolve()
-            if extract_root.resolve() != target and extract_root.resolve() not in target.parents:
-                raise UserFacingError("ZIP 文件包含异常路径，请检查后重新上传。")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(member) as src, open(target, "wb") as dst:
-                shutil.copyfileobj(src, dst)
-
-    if not json_member:
-        raise UserFacingError("ZIP 报告包中未找到 report_data.json，请确认上传的是一线报告 ZIP。")
-
-    data_path = extract_root / json_member
-    data = json.loads(data_path.read_text(encoding="utf-8"))
-    return data, extract_root
+    return extract_json_package(zip_path, extract_root, "report_data.json", "一线报告 ZIP")
 
 
 def load_report_data_from_json(file_storage, session_id):
     upload_root = RTS_UPLOADS_DIR / session_id
     upload_root.mkdir(parents=True, exist_ok=True)
     json_path = upload_root / "report_data.json"
-    file_storage.save(str(json_path))
-    data = json.loads(json_path.read_text(encoding="utf-8"))
+    data = save_json_upload(file_storage, json_path, "report_data.json")
     return data, upload_root
 
 
 def load_rts_review_data_from_zip(zip_path, session_id):
     """Extract an RTS return ZIP safely and return rts_review_data.json data."""
     extract_root = RTS_UPLOADS_DIR / session_id / "rts_extracted"
-    extract_root.mkdir(parents=True, exist_ok=True)
-
-    with zipfile.ZipFile(str(zip_path), "r") as archive:
-        json_member = None
-        for member in archive.infolist():
-            member_name = member.filename.replace("\\", "/")
-            if member_name.endswith("/"):
-                continue
-            if ".." in Path(member_name).parts:
-                raise UserFacingError("ZIP 文件包含异常路径，请检查后重新上传。")
-            if Path(member_name).name == "rts_review_data.json":
-                json_member = member_name
-            target = (extract_root / member_name).resolve()
-            if extract_root.resolve() != target and extract_root.resolve() not in target.parents:
-                raise UserFacingError("ZIP 文件包含异常路径，请检查后重新上传。")
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(member) as src, open(target, "wb") as dst:
-                shutil.copyfileobj(src, dst)
-
-    if not json_member:
-        raise UserFacingError("RTS/GTS 返回 ZIP 中未找到 rts_review_data.json，请确认上传的是 RTS/GTS 审核返回 ZIP。")
-
-    data_path = extract_root / json_member
-    data = json.loads(data_path.read_text(encoding="utf-8"))
-    return data, extract_root
+    return extract_json_package(zip_path, extract_root, "rts_review_data.json", "RTS/GTS 返回 ZIP")
 
 
 def load_rts_review_data_from_json(file_storage, session_id):
     upload_root = RTS_UPLOADS_DIR / session_id
     upload_root.mkdir(parents=True, exist_ok=True)
     json_path = upload_root / "rts_review_data.json"
-    file_storage.save(str(json_path))
-    data = json.loads(json_path.read_text(encoding="utf-8"))
+    data = save_json_upload(file_storage, json_path, "rts_review_data.json")
     return data, upload_root
 
 
@@ -1855,18 +2105,31 @@ def build_attention_from_source(source_data):
 
 def enrich_source_image_urls(source_data, session_id):
     """Add preview URLs for images extracted from ZIP. JSON-only uploads simply have no preview URL."""
+    session_root = RTS_UPLOADS_DIR / session_id
+    preview_root = session_root / "extracted"
+    if not preview_root.exists():
+        preview_root = session_root
+    preview_root = preview_root.resolve()
+
+    def enrich_image(image):
+        rel_path = (image.get("path") or "").replace("\\", "/")
+        image.pop("preview_url", None)
+        if not rel_path:
+            return
+        source = (preview_root / rel_path).resolve()
+        if preview_root != source and preview_root not in source.parents:
+            return
+        if source.is_file():
+            image["preview_url"] = "/rts-source/%s/%s" % (session_id, rel_path)
+
     for item in iter_report_items(source_data):
         for field in ["before_images", "after_images"]:
             for image in item.get(field) or []:
-                rel_path = (image.get("path") or "").replace("\\", "/")
-                if rel_path:
-                    image["preview_url"] = "/rts-source/%s/%s" % (session_id, rel_path)
+                enrich_image(image)
     for item in source_data.get("attention_items") or []:
         for field in ["before_images", "after_images"]:
             for image in item.get(field) or []:
-                rel_path = (image.get("path") or "").replace("\\", "/")
-                if rel_path:
-                    image["preview_url"] = "/rts-source/%s/%s" % (session_id, rel_path)
+                enrich_image(image)
     return source_data
 
 
@@ -2085,10 +2348,12 @@ def api_rts_report():
 
 @app.route("/rts-source/<path:session>/<path:filename>")
 def rts_source_file(session, filename):
-    root = (RTS_UPLOADS_DIR / session / "extracted").resolve()
+    session_name = safe_path_segment(session, "审核会话")
+    session_root = contained_path(RTS_UPLOADS_DIR, session_name, label="审核会话路径")
+    root = contained_path(session_root, "extracted", label="审核图片路径")
     if not root.exists():
         # JSON-only upload: no extracted image root.
-        root = (RTS_UPLOADS_DIR / session).resolve()
+        root = session_root
     return send_from_directory(str(root), filename)
 
 
@@ -2151,23 +2416,14 @@ def api_open_output():
 
 @app.route("/uploads/<path:session>/<path:filename>")
 def uploaded_file(session, filename):
-    return send_from_directory(str(UPLOADS_DIR / session), filename)
+    session_name = safe_path_segment(session, "上传会话")
+    root = contained_path(UPLOADS_DIR, session_name, label="上传路径")
+    return send_from_directory(str(root), filename)
 
 
 @app.route("/output-files/<path:filename>")
 def output_file(filename):
     return send_from_directory(str(OUTPUT_DIR), filename)
-
-
-def find_free_port(start=5000, end=5100):
-    for port in range(start, end + 1):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            try:
-                sock.bind(("127.0.0.1", port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError("No free local port found.")
 
 
 def open_browser_later(port):
@@ -2178,10 +2434,14 @@ def open_browser_later(port):
 
 
 def main():
+    ensure_ui_assets_available()
     setup_runtime()
-    port = int(os.environ.get("JUMP_CHECK_PORT") or find_free_port())
+    requested_port = int(os.environ["JUMP_CHECK_PORT"]) if os.environ.get("JUMP_CHECK_PORT") else 0
+    server = make_server("0.0.0.0", requested_port, app, threaded=True)
+    port = server.server_port
+    logging.info("local server listening on port %s", port)
     open_browser_later(port)
-    app.run(host="0.0.0.0", port=port, debug=False)
+    server.serve_forever()
 
 
 if __name__ == "__main__":

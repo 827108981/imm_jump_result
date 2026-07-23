@@ -2,3 +2,15 @@ tmp/
 release/
 dist/
 build/
+__pycache__/
+*.py[cod]
+logs/
+output/
+uploads/
+drafts/
+mobile_tasks/
+mobile_upload_chunks/
+resources/
+resources/*.xlsx
+
+

@@ -2,3 +2,9 @@ tmp/
 release/
 dist/
 build/
+__pycache__/
+*.py[cod]
+logs/
+output/
+uploads/
+resources/*.xlsx

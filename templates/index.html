@@ -4,175 +4,139 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ app_name }} {{ version }}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}-result-static">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ version }}-desktop-workbench">
 </head>
 <body>
-  <header class="app-header">
+  <header class="app-header compact-header">
     <div class="title-block">
       <h1>{{ app_name }}</h1>
       <span class="version">{{ version }}</span>
       <span id="templateStatus" class="status-pill">读取模板中</span>
     </div>
-    <div class="toolbar header-note">一线采集、RTS/GTS审核、补充返修都在本工具内完成</div>
+    <div class="toolbar header-actions">
+      <span class="header-note">一线采集、RTS/GTS审核、补充返修</span>
+      <button type="button" id="topCheckProxyBtn">检查完整性</button>
+      <button type="button" id="topGenerateProxyBtn" class="primary">生成报告ZIP</button>
+    </div>
   </header>
 
-  <main class="page-shell">
-    <a class="must-read-notice" href="#usageNotice">使用前务必读懂闭环流程（使用须知）</a>
-    <section id="usageNotice" class="workflow-guide">
+  <main class="page-shell frontline-page">
+    <section id="usageNotice" class="workflow-guide is-collapsed">
       <div class="guide-head">
-        <h2>使用须知</h2>
-        <span class="tag">一线 ⇄ RTS/GTS</span>
+        <div>
+          <h2>使用说明</h2>
+          <p>工作流程：一线采集 → RTS/GTS审核 → 一线补充 → RTS/GTS复核</p>
+        </div>
+        <button type="button" id="usageToggleBtn" aria-expanded="false">查看说明</button>
       </div>
-      <div class="workflow-steps detailed">
-        <div>
-          <strong>1. 一线采集</strong>
-          <span>手机开热点、电脑连接该热点后，点击“生成手机二维码”；手机扫码进入采集页，可拍照、选图、填写记录并同步到当前电脑报告。采集完成后点击“检查完整性”，通过后点击“生成报告ZIP”发给 RTS/GTS。</span>
-        </div>
-        <div>
-          <strong>2. RTS/GTS审核</strong>
-          <span>点击“RTS/GTS审核界面”进入审核页，导入一线 ZIP，逐项选择通过或需补充；需要返修时勾选补记录、补原始照片或补调试后照片，填写审核结论和审核说明，生成 RTS/GTS 审核返回 ZIP。</span>
-        </div>
-        <div>
-          <strong>3. 一线补充</strong>
-          <span>一线收到 RTS/GTS 审核返回 ZIP 后，直接导入该 ZIP 恢复原报告、照片和补充清单；补完后再次检查并生成报告 ZIP，发回 RTS/GTS 复核。</span>
+      <div id="usageGuideBody" class="workflow-guide-body">
+        <div class="workflow-steps detailed">
+          <div><strong>1. 一线采集</strong><span>电脑端填写或生成手机二维码；手机可填写、拍照并同步到当前报告。完成后检查完整性，生成一线报告 ZIP 发给 RTS/GTS。</span></div>
+          <div><strong>2. RTS/GTS审核</strong><span>进入审核页导入一线 ZIP，逐项选择通过或需补充，填写总体审核意见后生成 RTS/GTS 返回 ZIP。</span></div>
+          <div><strong>3. 一线补充</strong><span>一线直接导入 RTS/GTS 返回 ZIP，恢复原报告、照片和补充清单；补完后重新生成一线报告 ZIP 发回复核。</span></div>
         </div>
       </div>
     </section>
 
-    <section class="action-board">
-      <div class="action-group action-main">
-        <div class="action-title"><h2>采集与返修</h2><span>先采集，收到 RTS/GTS 意见后再导入补充清单</span></div>
-        <div class="action-row">
-          <button type="button" id="mobileTaskBtn">生成手机二维码</button>
-          <button type="button" id="importRtsReviewBtn">导入RTS/GTS返回ZIP</button>
-          <input id="importRtsReviewInput" type="file" accept=".zip,.json" hidden>
-        </div>
-      </div>
-      <div class="action-group">
-        <div class="action-title"><h2>草稿</h2><span>临时保存或继续未完成记录</span></div>
-        <div class="action-row">
-          <select id="draftSelect" class="draft-select" aria-label="草稿列表">
-            <option value="">草稿</option>
-          </select>
-          <button type="button" id="saveDraftBtn">保存草稿</button>
-          <button type="button" id="loadDraftBtn">导入草稿</button>
-        </div>
-      </div>
-      <div class="action-group">
-        <div class="action-title"><h2>检查与输出</h2><span>提交前先检查，ZIP用于发送 RTS/GTS</span></div>
-        <div class="action-row">
-          <button type="button" id="checkBtn">检查完整性</button>
-          <button type="button" id="generateBtn" class="primary">生成报告ZIP</button>
-          <button type="button" id="openOutputBtn">打开输出文件夹</button>
-          <a class="nav-link" href="/mobile-offline/download">下载离线HTML</a>
-          <a class="nav-link" href="/rts" target="_blank">RTS/GTS审核界面</a>
+    <section class="action-board compact-action-board" aria-label="采集与报告操作">
+      <div class="action-title"><h2>采集与报告</h2><span>生成或补充当前一线报告</span></div>
+      <div class="action-row primary-actions">
+        <a class="button-link" href="/mobile-offline/download">下载手机离线HTML</a>
+        <button type="button" id="importRtsReviewBtn">导入RTS/GTS返回ZIP</button>
+        <input id="importRtsReviewInput" type="file" accept=".zip,.json" hidden>
+        <div class="more-tools-wrap">
+          <button type="button" id="moreToolsBtn" aria-expanded="false" aria-controls="moreToolsPanel">更多工具</button>
+          <div id="moreToolsPanel" class="more-tools-panel hidden">
+            <label class="more-tools-field"><span>草稿</span><select id="draftSelect" class="draft-select" aria-label="草稿列表"><option value="">选择草稿</option></select></label>
+            <button type="button" id="saveDraftBtn">保存草稿</button>
+            <button type="button" id="loadDraftBtn">导入草稿</button>
+            <button type="button" id="openOutputBtn">打开输出文件夹</button>
+            <a class="nav-link" href="/mobile-offline/download">下载离线HTML</a>
+            <a class="nav-link" href="/rts" target="_blank" rel="noopener">进入RTS/GTS审核</a>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="resultPanel" class="result-panel hidden"></section>
-    <section id="errorPanel" class="error-panel hidden">
-      <h2>以下内容未完成，请补充后重新生成报告</h2>
-      <div id="errorList"></div>
-    </section>
+    <section id="errorPanel" class="error-panel hidden"><div id="errorList"></div></section>
 
-    <section class="info-band">
-      <form id="basicForm" class="basic-grid">
-        {% for field in basic_fields %}
-          <label class="field field-{{ field.key }}" for="base_{{ field.key }}">
-            <span>{{ field.label }}{% if field.required %}<b>*</b>{% endif %}</span>
-            {% if field.key == "problem" %}
-              <textarea id="base_{{ field.key }}" name="{{ field.key }}" rows="2" data-required="{{ '1' if field.required else '0' }}"></textarea>
-            {% else %}
-              <input id="base_{{ field.key }}" name="{{ field.key }}" type="{{ 'date' if field.key == 'check_date' else 'text' }}" data-required="{{ '1' if field.required else '0' }}">
-            {% endif %}
-          </label>
-        {% endfor %}
-      </form>
-      <div class="stats-grid" id="statsGrid">
-        <div><span>总排查项</span><strong id="statTotal">0</strong></div>
-        <div><span>已完成</span><strong id="statDone">0</strong></div>
-        <div><span>未完成</span><strong id="statTodo">0</strong></div>
-        <div><span>图片缺失</span><strong id="statMissingImages">0</strong></div>
-        <div><span>异常/待确认</span><strong id="statAttention">0</strong></div>
-        <div class="progress-cell">
-          <span>完成度</span>
-          <strong id="statPercent">0%</strong>
-          <div class="progress-track"><i id="progressBar"></i></div>
-        </div>
+    <section id="basicInfoSection" class="basic-info-section">
+      <div id="basicInfoHeader" class="basic-info-header">
+        <div><h2>基础信息</h2><span id="basicInfoStatus" class="tag">未完成</span></div>
+        <button type="button" id="basicInfoToggleBtn" disabled aria-expanded="true">请先完成必填项</button>
+      </div>
+      <div id="basicInfoSummary" class="basic-info-summary hidden"></div>
+      <div id="basicInfoEditor" class="basic-info-editor">
+        <form id="basicForm" class="basic-grid">
+          {% for field in basic_fields %}
+            <label class="field field-{{ field.key }}" for="base_{{ field.key }}">
+              <span>{{ field.label }}{% if field.required %}<b>*</b>{% endif %}</span>
+              {% if field.key == "problem" %}
+                <textarea id="base_{{ field.key }}" name="{{ field.key }}" rows="2" data-required="{{ '1' if field.required else '0' }}"></textarea>
+              {% elif field.allow_custom %}
+                <select id="base_{{ field.key }}_select" class="project-select" data-project-select aria-label="{{ field.label }}选择">
+                  <option value="">请选择{{ field.label }}</option>
+                  {% for option in field.options %}<option value="{{ option }}">{{ option }}</option>{% endfor %}
+                  <option value="__custom__">手工输入项目</option>
+                </select>
+                <input id="base_{{ field.key }}" class="project-custom-input hidden" name="{{ field.key }}" type="text" autocomplete="off" placeholder="请输入跳值项目" data-required="{{ '1' if field.required else '0' }}">
+              {% elif field.options %}
+                <select id="base_{{ field.key }}" name="{{ field.key }}" data-required="{{ '1' if field.required else '0' }}">
+                  <option value="">请选择{{ field.label }}</option>
+                  {% for option in field.options %}<option value="{{ option }}">{{ option }}</option>{% endfor %}
+                </select>
+              {% else %}
+                <input id="base_{{ field.key }}" name="{{ field.key }}" type="{{ 'date' if field.key == 'check_date' else 'text' }}" data-required="{{ '1' if field.required else '0' }}">
+              {% endif %}
+            </label>
+          {% endfor %}
+        </form>
       </div>
     </section>
 
-    <section class="mobile-panel">
+    <section id="statsGrid" class="stats-grid compact-stats" aria-label="填写进度">
+      <div class="metric-card metric-progress"><span>完成进度</span><strong><b id="statDone">0</b><em>/</em><b id="statTotal">0</b></strong></div>
+      <div class="metric-card"><span>待完成</span><strong id="statTodo">0</strong></div>
+      <div class="metric-card"><span>缺少照片</span><strong id="statMissingImages">0</strong></div>
+      <div class="metric-card"><span>异常关注</span><strong id="statAttention">0</strong></div>
+      <div class="progress-summary"><span>完成度 <b id="statPercent">0%</b></span><div class="progress-track"><i id="progressBar"></i></div></div>
+    </section>
+
+    <section id="mobilePanel" class="mobile-panel hidden">
       <div class="mobile-panel-main">
-        <div>
-          <h2>手机采集二维码</h2>
-        </div>
-        <div class="mobile-actions">
-          <button type="button" id="mobileCopyBtn" class="hidden">复制链接</button>
-        </div>
+        <div><h2>手机采集已开启</h2><p id="mobilePanelState">手机采集：等待扫码</p></div>
+        <div class="mobile-actions"><button type="button" id="mobileCopyBtn" class="hidden">复制链接</button><button type="button" id="mobilePanelCollapseBtn" class="hidden" aria-expanded="true">收起</button></div>
       </div>
       <div id="mobileQrPanel" class="mobile-qr-panel hidden">
         <img id="mobileQrImage" alt="手机采集二维码">
-        <div class="mobile-link-block">
-          <span id="mobileStatusText">等待手机连接</span>
-          <a id="mobileLink" href="#" target="_blank"></a>
-          <small id="mobileHint">如手机打不开，请确认电脑已连接手机热点，并允许 Windows 防火墙访问专用网络。</small>
-        </div>
+        <div class="mobile-link-block"><span id="mobileStatusText">等待手机连接</span><a id="mobileLink" href="#" target="_blank"></a><small id="mobileHint">如手机打不开，请确认电脑已连接手机热点，并允许 Windows 防火墙访问专用网络。</small></div>
       </div>
     </section>
 
     <section id="supplementPanel" class="supplement-panel hidden">
-      <div class="supplement-panel-head">
-        <div>
-          <h2>RTS/GTS补充清单</h2>
-          <p id="supplementSummary">尚未导入 RTS/GTS 返回 ZIP。</p>
-        </div>
-        <div class="supplement-actions">
-          <button type="button" id="showSupplementOnlyBtn">只看补充项</button>
-          <button type="button" id="showAllItemsBtn">显示全部</button>
-          <button type="button" id="checkSupplementBtn">检查补充项</button>
-        </div>
-      </div>
+      <div class="supplement-panel-head"><div><h2>RTS/GTS补充清单</h2><p id="supplementSummary">尚未导入 RTS/GTS 返回 ZIP。</p></div><div class="supplement-actions"><button type="button" id="showSupplementOnlyBtn">只看补充项</button><button type="button" id="showAllItemsBtn">显示全部</button><button type="button" id="checkSupplementBtn">检查补充项</button></div></div>
       <div id="supplementList" class="supplement-list"></div>
     </section>
 
-    <section id="itemGroups" class="item-groups"></section>
+    <section id="frontlineWorkbench" class="frontline-workbench">
+      <aside id="itemNavigator" class="item-navigator">
+        <div class="navigator-head"><h2>排查步骤</h2><span id="itemNavigatorCount" class="tag">0 项</span></div>
+        <div id="itemFilterBar" class="item-filter-bar"></div>
+        <div id="itemNavigationList" class="item-navigation-list"></div>
+      </aside>
+      <div id="itemDetailPanel" class="item-detail-panel"><div id="itemGroups" class="item-groups"><div class="empty-state">正在读取排查模板。</div></div></div>
+    </section>
+
+    <div id="itemBottomBar" class="workbench-bottom-bar">
+      <div class="bottom-progress"><strong id="itemPositionText">第 0 / 0 项</strong><span id="itemBottomStats">已完成 0 / 0</span></div>
+      <div class="bottom-actions"><button type="button" id="previousItemBtn">上一项</button><button type="button" id="nextItemBtn">下一项</button><button type="button" id="nextTodoBtn">下一待办</button><button type="button" id="checkBtn">检查完整性</button><button type="button" id="generateBtn" class="primary">生成报告ZIP</button></div>
+    </div>
   </main>
 
-  <div id="busyModal" class="busy-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="busyTitle">
-    <div class="busy-dialog">
-      <div id="busySpinner" class="busy-spinner"></div>
-      <h2 id="busyTitle">正在处理</h2>
-      <p id="busyMessage">请稍候。</p>
-      <div id="busyLinks" class="busy-links"></div>
-      <button type="button" id="busyCloseBtn" class="primary hidden">知道了</button>
-    </div>
-  </div>
-
-  <div id="imageModal" class="image-modal hidden" role="dialog" aria-modal="true">
-    <div class="image-modal-bar">
-      <button type="button" id="modalPrev">上一张</button>
-      <span id="modalCounter">1 / 1</span>
-      <button type="button" id="modalNext">下一张</button>
-      <button type="button" id="modalZoomOut">缩小</button>
-      <button type="button" id="modalRotateLeft">左旋转</button>
-      <button type="button" id="modalZoomReset">还原</button>
-      <button type="button" id="modalRotateRight">右旋转</button>
-      <button type="button" id="modalZoomIn">放大</button>
-      <button type="button" id="modalClose">关闭</button>
-    </div>
-    <div id="imageStage" class="image-stage">
-      <img id="modalImage" alt="预览图片">
-    </div>
-  </div>
-
-  <script>
-    window.APP_CONFIG = {
-      basicFields: {{ basic_fields|tojson }},
-      templateName: {{ template_name|tojson }}
-    };
-  </script>
-  <script src="{{ url_for('static', filename='js/app.js') }}?v={{ version }}-result-static"></script>
+  <div id="busyModal" class="busy-modal hidden" role="alertdialog" aria-modal="true" aria-labelledby="busyTitle"><div class="busy-dialog"><div id="busySpinner" class="busy-spinner"></div><h2 id="busyTitle">正在处理</h2><p id="busyMessage">请稍候。</p><div id="busyLinks" class="busy-links"></div><button type="button" id="busyCloseBtn" class="primary hidden">知道了</button></div></div>
+  <div id="imageModal" class="image-modal hidden" role="dialog" aria-modal="true"><div class="image-modal-bar"><button type="button" id="modalPrev">上一张</button><span id="modalCounter">1 / 1</span><button type="button" id="modalNext">下一张</button><button type="button" id="modalZoomOut">缩小</button><button type="button" id="modalRotateLeft">左旋转</button><button type="button" id="modalZoomReset">还原</button><button type="button" id="modalRotateRight">右旋转</button><button type="button" id="modalZoomIn">放大</button><button type="button" id="modalClose">关闭</button></div><div id="imageStage" class="image-stage"><img id="modalImage" alt="预览图片"></div></div>
+  <script>window.APP_CONFIG = { basicFields: {{ basic_fields|tojson }}, templateName: {{ template_name|tojson }}, ultrasoundProjects: {{ ultrasound_projects|tojson }} };</script>
+  <script src="{{ url_for('static', filename='js/app.js') }}?v={{ version }}-desktop-workbench"></script>
 </body>
 </html>

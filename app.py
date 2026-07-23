@@ -18,12 +18,23 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
 from werkzeug.utils import secure_filename
+from werkzeug.serving import make_server
+
+from reference_assets import extract_reference_assets
+from template_catalog import (
+    MODELS,
+    SHEET_NAME,
+    ULTRASOUND_PROJECTS,
+    WORKBOOK_NAME,
+    build_template_items,
+    get_project_options,
+    prepare_items_for_context,
+)
 
 
 APP_NAME = "免疫跳值排查反馈报告生成工具"
-VERSION = "V1.7"
-SHEET_NAME = "用服工程师排查反馈表"
-TEMPLATE_NAME = "免疫产品_跳值问题用服工程师排查反馈表_V1.0_CN.xlsx"
+VERSION = "V2.0.4"
+TEMPLATE_NAME = WORKBOOK_NAME
 PACKAGE_FORMAT_VERSION = "frontline-report-v2"
 ZIP_MAX_BYTES = 500 * 1024 * 1024
 
@@ -41,11 +52,12 @@ RTS_UPLOADS_DIR = UPLOADS_DIR / "rts_reviews"
 MOBILE_TASKS_DIR = APP_DIR / "mobile_tasks"
 MOBILE_CHUNKS_DIR = APP_DIR / "mobile_upload_chunks"
 TEMPLATE_PATH = RESOURCES_DIR / TEMPLATE_NAME
+REFERENCE_DIR = SOURCE_DIR / "static" / "reference"
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 5 * 1024 * 1024
 IMAGE_COMPRESS_TARGET_SIZE = 2 * 1024 * 1024
-MAX_IMAGES_PER_FIELD = 5
+MAX_IMAGES_PER_FIELD = 7
 MOBILE_TASK_TTL_SECONDS = 8 * 60 * 60
 MOBILE_CHUNK_SIZE = 512 * 1024
 
@@ -80,17 +92,23 @@ REQUIRED_COLUMNS = [
     "调试或维护后照片",
 ]
 
-BASIC_FIELDS = [
+def build_basic_fields():
+    projects = get_project_options(TEMPLATE_PATH) if TEMPLATE_PATH.exists() else []
+    return [
     {"key": "hospital", "label": "医院名称", "required": True},
-    {"key": "model", "label": "设备型号", "required": True},
+    {"key": "model", "label": "设备型号", "required": True, "options": MODELS},
     {"key": "serial", "label": "设备序列号", "required": True},
     {"key": "software", "label": "软件版本", "required": True},
-    {"key": "jump_project", "label": "跳值项目", "required": True},
+    {"key": "jump_project", "label": "跳值项目", "required": True, "options": projects, "allow_custom": True},
     {"key": "problem", "label": "问题描述", "required": True},
     {"key": "engineer", "label": "排查工程师", "required": True},
     {"key": "check_date", "label": "排查日期", "required": True},
     {"key": "contact", "label": "联系方式", "required": False},
-]
+    ]
+
+
+BASIC_FIELDS = build_basic_fields()
+_TEMPLATE_CACHE = None
 
 
 app = Flask(
@@ -99,6 +117,33 @@ app = Flask(
     static_folder=str(SOURCE_DIR / "static"),
 )
 app.config["MAX_CONTENT_LENGTH"] = ZIP_MAX_BYTES + 20 * 1024 * 1024
+
+
+def ensure_ui_assets_available():
+    """Fail clearly when someone runs an incomplete desktop delivery folder."""
+    required = [
+        SOURCE_DIR / "templates" / "index.html",
+        SOURCE_DIR / "templates" / "rts_review.html",
+        SOURCE_DIR / "static" / "css" / "style.css",
+        SOURCE_DIR / "static" / "js" / "app.js",
+        SOURCE_DIR / "static" / "js" / "rts_review.js",
+    ]
+    missing = [path.name for path in required if not path.is_file()]
+    if not missing:
+        return
+
+    message = (
+        "程序文件不完整，缺少界面资源：%s。\n\n"
+        "请完整解压并运行 %s 发布包内的 EXE，不要只复制 EXE 文件。"
+    ) % ("、".join(missing), VERSION)
+    if os.name == "nt":
+        try:
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(0, message, APP_NAME, 0x10)
+        except Exception:
+            pass
+    raise RuntimeError(message)
 
 
 class UserFacingError(Exception):
@@ -305,6 +350,24 @@ def import_openpyxl():
 
 
 def read_excel_template():
+    """Load the current Excel catalogue and its step-level reference images.
+
+    The generated references are tiny JPEGs kept in ``static/reference`` for the
+    desktop app.  The release builder embeds the same files into the single
+    offline HTML, so field engineers do not need a network connection.
+    """
+    global _TEMPLATE_CACHE
+    if _TEMPLATE_CACHE is not None:
+        return json.loads(json.dumps(_TEMPLATE_CACHE, ensure_ascii=False))
+    if not TEMPLATE_PATH.exists():
+        raise UserFacingError("未找到最新版排查反馈表，请确认 resources 目录中包含标准 Excel。", 404)
+    references = extract_reference_assets(TEMPLATE_PATH, REFERENCE_DIR)
+    _TEMPLATE_CACHE = build_template_items(TEMPLATE_PATH, references)
+    logging.info("latest template loaded: %s items from %s", len(_TEMPLATE_CACHE), TEMPLATE_PATH)
+    return json.loads(json.dumps(_TEMPLATE_CACHE, ensure_ascii=False))
+
+
+def read_legacy_excel_template():
     if not TEMPLATE_PATH.exists():
         raise UserFacingError("未找到排查反馈表模板，请确认模板文件是否存在。", 404)
 
@@ -441,7 +504,11 @@ def read_excel_template():
 
 
 def group_items(items):
-    return [{"category": "排查步骤（1-36，第35步含4项）", "items": sorted(items, key=lambda item: item.get("sort_order") or item.get("index") or 0)}]
+    return [{"category": "排查步骤", "items": sorted(items, key=lambda item: item.get("sort_order") or item.get("index") or 0)}]
+
+
+def template_items_for_base_info(base_info):
+    return prepare_items_for_context(read_excel_template(), base_info or {})
 
 
 def get_payload_item_map(payload_items):
@@ -1123,6 +1190,7 @@ def index():
         version=VERSION,
         basic_fields=BASIC_FIELDS,
         template_name=TEMPLATE_NAME,
+        ultrasound_projects=ULTRASOUND_PROJECTS,
     )
 
 
@@ -1178,7 +1246,7 @@ def api_upload():
 @app.route("/api/check", methods=["POST"])
 def api_check():
     payload = request.get_json(force=True)
-    template_items = read_excel_template()
+    template_items = template_items_for_base_info(payload.get("base_info") or {})
     errors, stats, warnings = validate_submission(
         payload.get("base_info") or {},
         payload.get("items") or [],
@@ -1194,7 +1262,7 @@ def api_report():
     payload = request.get_json(force=True)
     base_info = payload.get("base_info") or {}
     payload_items = payload.get("items") or []
-    template_items = read_excel_template()
+    template_items = template_items_for_base_info(base_info)
     errors, stats, warnings = validate_submission(base_info, payload_items, template_items)
 
     if errors:
@@ -1337,7 +1405,9 @@ def api_report_import_rts_review():
 
 @app.route("/mobile")
 def mobile_page():
-    return render_template("mobile.html", app_name=APP_NAME, version=VERSION)
+    # The offline page is the only supported mobile workflow.  Serving the same
+    # single file here keeps old QR links useful without retaining a second UI.
+    return render_mobile_offline_html()
 
 
 @app.route("/api/mobile/task/create", methods=["POST"])
@@ -1376,7 +1446,7 @@ def api_mobile_task():
             "task_id": task["task_id"],
             "session_id": task["session_id"],
             "base_info": task.get("base_info") or {},
-            "items": read_excel_template(),
+            "items": template_items_for_base_info(task.get("base_info") or {}),
             "item_data": task.get("items") or [],
             "updated_seq": task.get("updated_seq") or 0,
             "expires_at": task.get("expires_at") or "",
@@ -2159,17 +2229,6 @@ def output_file(filename):
     return send_from_directory(str(OUTPUT_DIR), filename)
 
 
-def find_free_port(start=5000, end=5100):
-    for port in range(start, end + 1):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            try:
-                sock.bind(("127.0.0.1", port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError("No free local port found.")
-
-
 def open_browser_later(port):
     def open_page():
         webbrowser.open("http://127.0.0.1:%s" % port)
@@ -2178,10 +2237,14 @@ def open_browser_later(port):
 
 
 def main():
+    ensure_ui_assets_available()
     setup_runtime()
-    port = int(os.environ.get("JUMP_CHECK_PORT") or find_free_port())
+    requested_port = int(os.environ["JUMP_CHECK_PORT"]) if os.environ.get("JUMP_CHECK_PORT") else 0
+    server = make_server("0.0.0.0", requested_port, app, threaded=True)
+    port = server.server_port
+    logging.info("local server listening on port %s", port)
     open_browser_later(port)
-    app.run(host="0.0.0.0", port=port, debug=False)
+    server.serve_forever()
 
 
 if __name__ == "__main__":
